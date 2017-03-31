@@ -10,7 +10,7 @@ import imagelib as IL
 ZDIM = 20
 VARS = {}
 IMGSIZE = [None,128,128,1]
-TXTFILE = 'avcout.txt'
+TXTFILE = 'list.txt'
 BETA = 0.5
 LR = 0.0002
 BSIZE = 64
@@ -73,16 +73,14 @@ with tf.name_scope('opti'):
 def getGeneratedImg(sess,it):
     a = np.random.uniform(size=[4,ZDIM],low=-1.0,high=1.0)
     img = sess.run(generated,feed_dict={z:a})
-    img = img+1
-    img = img*127.5
-    img = np.floor(img)
-    img = img.astype(np.uint8)
+    img = IL.orignialImgs(img).reshape([-1,128,128])
     for i in range(4):
         cv2.imwrite('res/iter'+str(it)+'img'+str(i)+'.jpg',img[i])
 
 def getImgs():
     print('reading image data...')
     pics = IL.fromListGetImages(TXTFILE,gray=IL.PARAM_GRAY,shape=[-1,128,128,1])
+    pics = IL.normalizeImgs(pics)
     return pics
 
 modelpath = 'model/'
@@ -95,12 +93,8 @@ def training():
         M.loadSess(modelpath,sess=sess)
         imgs = list(getImgs())
         for i in range(MAXITER):
-            trainimg = imgs[:BSIZE]
-            imgs[-BSIZE:],imgs[:-BSIZE] = imgs[:BSIZE],imgs[BSIZE:] 
             a = np.random.uniform(size=[BSIZE,ZDIM],low=-1.0,high=1.0)
-            # for _ in range(3):
-            #     sess.run(trainG,feed_dict={z:a})
-            _,_,mg,lsd,lsg = sess.run([trainG,trainD,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
+            _,mg,lsd,lsg = sess.run([train,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
             if (i)%1 == 0:
                 writer.add_summary(mg,i)
                 print('iter:',i)
@@ -114,22 +108,12 @@ def training():
 def generateSample():
     with tf.Session() as sess:
         loadSess(sess=sess)
-        cnt = 0
-        while True:
+        for _ in range(100):
             a = np.random.uniform(size=[1,ZDIM],low=-1.0,high=1.0)
             img,res = sess.run([generated,tf.nn.softmax(disfalse)],feed_dict={z:a})
             print('result:',res[0][1])
-            if True:
-                resimg = img[0]+1
-                resimg = resimg.reshape([128,128])
-                resimg = resimg*127.5
-                resimg = np.floor(resimg)
-                resimg = resimg.astype(np.uint8)
-                cv2.imwrite('samples/'+str(cnt)+'.jpg',resimg)
-                cnt+=1
-                print('Generated sample:',cnt)
-                if cnt==100:
-                    break
+            resimg = IL.orignialImgs(res).reshape([128,128])
+            cv2.imwrite('samples/'+str(cnt)+'.jpg',resimg)
 
 training()
 # generateSample()
