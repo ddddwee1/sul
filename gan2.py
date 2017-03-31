@@ -8,15 +8,16 @@ import time
 import imagelib as IL
 
 ZDIM = 20
-VARS = {}
 IMGPIX = 128
 CHN = 1
-TXTFILE = 'list.txt'
+TXTFILE = 'avcout.txt'
 BETA = 0.5
 LR = 0.0002
 BSIZE = 64
 MAXITER = 300000
+
 IMGSIZE = [None,IMGPIX,IMGPIX,CHN]
+VARS = {}
 
 with tf.name_scope('vecInput'):
     z = tf.placeholder(tf.float32,[None,ZDIM],name='InputVec')
@@ -75,13 +76,13 @@ with tf.name_scope('opti'):
 def getGeneratedImg(sess,it):
     a = np.random.uniform(size=[4,ZDIM],low=-1.0,high=1.0)
     img = sess.run(generated,feed_dict={z:a})
-    img = IL.orignialImgs(img).reshape([-1,128,128])
+    img = IL.originalImgs(img).reshape([-1,128,128])
     for i in range(4):
         cv2.imwrite('res/iter'+str(it)+'img'+str(i)+'.jpg',img[i])
 
 def getImgs():
     print('reading image data...')
-    pics = IL.fromListGetImages(TXTFILE,gray=IL.PARAM_GRAY,shape=[-1,128,128,1])
+    pics = IL.fromListGetImages(TXTFILE,gray=IL.PARAM_GRAY,shape=[-1,128,128,1],resize=IMGPIX)
     pics = IL.normalizeImgs(pics)
     return pics
 
@@ -94,8 +95,11 @@ def training():
         saver = tf.train.Saver()
         M.loadSess(modelpath,sess=sess)
         imgs = list(getImgs())
+        print('start training...')
         for i in range(MAXITER):
             a = np.random.uniform(size=[BSIZE,ZDIM],low=-1.0,high=1.0)
+            # for _ in range(3):
+                # sess.run(trainG,feed_dict={z:a})
             _,mg,lsd,lsg = sess.run([trainAll,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
             if (i)%1 == 0:
                 writer.add_summary(mg,i)
@@ -113,8 +117,7 @@ def generateSample():
         for _ in range(100):
             a = np.random.uniform(size=[1,ZDIM],low=-1.0,high=1.0)
             img,res = sess.run([generated,tf.nn.softmax(disfalse)],feed_dict={z:a})
-            print('result:',res[0][1])
-            resimg = IL.orignialImgs(res).reshape([128,128])
+            resimg = IL.originalImgs(res).reshape([128,128])
             cv2.imwrite('samples/'+str(cnt)+'.jpg',resimg)
 
 training()

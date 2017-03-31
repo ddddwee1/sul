@@ -10,23 +10,23 @@ PARAM_MFM_CONV = 4
 PARAM_MFM_FC = 5
 
 def loadSess(modelpath,sess=None,modpath=None):
-    #load session if there exist any models, and initialize the sess if not
-    if sess==None:
-        sess = tf.Session()
-    saver = tf.train.Saver()
-    ckpt = tf.train.get_checkpoint_state(modelpath)
-    if modpath!=None:
-        mod = modpath
-        print('loading from model:',mod)
-        saver.restore(sess,mod)
-    elif ckpt:
-        mod = ckpt.model_checkpoint_path
-        print('loading from model:',mod)
-        saver.restore(sess,mod)
-    else:
-    	print('No checkpoint in folder, initializing graph...')
-        sess.run(tf.global_variables_initializer())
-    return sess
+#load session if there exist any models, and initialize the sess if not
+	if sess==None:
+		sess = tf.Session()
+	saver = tf.train.Saver()
+	ckpt = tf.train.get_checkpoint_state(modelpath)
+	if modpath!=None:
+		mod = modpath
+		print('loading from model:',mod)
+		saver.restore(sess,mod)
+	elif ckpt:
+		mod = ckpt.model_checkpoint_path
+		print('loading from model:',mod)
+		saver.restore(sess,mod)
+	else:
+		print('No checkpoint in folder, initializing graph...')
+		sess.run(tf.global_variables_initializer())
+	return sess
 
 class Model():
 	def __init__(self,inp,size):
@@ -65,7 +65,7 @@ class Model():
 		self.inpsize[1] = self.inpsize[1]//stride
 		self.inpsize[2] = self.inpsize[2]//stride
 		self.inpsize[3] = outchn
-		return self.result
+		return [self.result,self.inpsize]
 
 	def deconvLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False):
 		self.result = L.deconv2D(self.result,size,outchn,'deconv_'+str(self.layernum),stride=stride,pad=pad)
@@ -76,29 +76,29 @@ class Model():
 		self.inpsize[1] *= stride
 		self.inpsize[2] *= stride
 		self.inpsize[3] = outchn
-		return self.result
+		return [self.result,self.inpsize]
 
 	def maxpoolLayer(self,size):
 		self.result = L.maxpooling(self.result,size,'maxpool_'+str(self.layernum))
 		self.inpsize[1] = self.inpsize[1]//size
 		self.inpsize[2] = self.inpsize[2]//size
-		return self.result
+		return [self.result,self.inpsize]
 
 	def avgpoolLayer(self,size):
 		self.result = L.avgpooling(self.result,size,'maxpool_'+str(self.layernum))
 		self.inpsize[1] = self.inpsize[1]//size
 		self.inpsize[2] = self.inpsize[2]//size
-		return self.result
+		return [self.result,self.inpsize]
 
 	def flatten(self):
 		self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]])
 		self.inpsize = [None,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]]
-		return self.result
+		return [self.result,self.inpsize]
 
 	def construct(self,shape):
 		self.result = tf.reshape(self.result,[-1,shape[0],shape[1],shape[2]])
 		self.inpsize = [None,shape[0],shape[1],shape[2]]
-		return self.result
+		return [self.result,self.inpsize]
 
 	def fcLayer(self,outsize,activation=-1,nobias=False,batch_norm=False):
 		self.result = L.Fcnn(self.result,self.inpsize[1],outsize,'fc_'+str(self.layernum),nobias=nobias)
@@ -107,12 +107,12 @@ class Model():
 		self.result = self.activate(self.result,activation)
 		self.layernum+=1
 		self.inpsize[1] = outsize
-		return self.result
+		return [self.result,self.inpsize]
 
 	def NIN(self,size,outchn1,outchn2,activation=-1,batch_norm=False):
 		convLayer(1,outchn1,activation=activation,batch_norm=batch_norm)
 		convLayer(size,outchn2,activation=activation,batch_norm=batch_norm)
-		return self.result
+		return [self.result,self.inpsize]
 
 	def incep(self,outchn1,outchn2,outchn3,outchn4,outchn5,activation=-1,batch_norm=False):
 		orignsize = self.inpsize
@@ -126,4 +126,11 @@ class Model():
 		csize = self.inpsize
 		self.inpsize[3] = asize[3]+bsize[3]+csize[3]
 		self.result = tf.concat(axis=3,values=[a,b,c])
-		return self.result
+		return [self.result,self.inpsize]
+
+	def concatToCurrent(self,layerinfo):
+		layerin, layersize = layerinfo[0],layerinfo[1]
+		assert layersize[0] == self.inpsize[0] and layersize[1]==inpsize[1]
+		self.result = tf.concat(axis=3,values=[self.result,layerin])
+		self.inpsize[3] += layersize[3]
+		return [self.result,self.inpsize]

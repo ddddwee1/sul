@@ -3,7 +3,8 @@ import numpy as np
 
 PARAM_GRAY = 0
 PARAM_COLOR = 1
-def fromListGetImages(listFile,gray=1,shape=None):
+
+def fromListGetImages(listFile,gray=1,shape=None,resize=None):
 	print('getting images from list file',listFile,'...')
 	valid = False
 	if (gray==1 and shape[-1]==3) or (gray==0 and shape[-1]==1):
@@ -16,9 +17,11 @@ def fromListGetImages(listFile,gray=1,shape=None):
 		dirs.append(line.replace('\n',''))
 	checkpoint = len(dirs)//100
 	for i in range(len(dirs)):
-		if i%checkpoint==0:
-			print('progress:',i//checkpoint,'%')
-		a = cv2.imread(dirs[i],arggray)
+		if (i+1)%checkpoint==0:
+			print('progress:',str(i//checkpoint)+'%')
+		a = cv2.imread(dirs[i],gray)
+		if resize!=None:
+			a = cv2.resize(a,(resize,resize))
 		pics.append(a)
 	pics = np.float32(pics)
 	if shape!=None:
@@ -35,4 +38,5 @@ def originalImgs(pics,minval=-1.0,maxval=1.0):
 	rg = maxval-minval
 	pics = pics-minval
 	pics = pics*255.0/rg
+	pics = np.floor(pics).astype(np.uint8)
 	return pics
