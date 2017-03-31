@@ -9,12 +9,14 @@ import imagelib as IL
 
 ZDIM = 20
 VARS = {}
-IMGSIZE = [None,128,128,1]
+IMGPIX = 128
+CHN = 1
 TXTFILE = 'list.txt'
 BETA = 0.5
 LR = 0.0002
 BSIZE = 64
 MAXITER = 300000
+IMGSIZE = [None,IMGPIX,IMGPIX,CHN]
 
 with tf.name_scope('vecInput'):
     z = tf.placeholder(tf.float32,[None,ZDIM],name='InputVec')
@@ -94,7 +96,7 @@ def training():
         imgs = list(getImgs())
         for i in range(MAXITER):
             a = np.random.uniform(size=[BSIZE,ZDIM],low=-1.0,high=1.0)
-            _,mg,lsd,lsg = sess.run([train,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
+            _,mg,lsd,lsg = sess.run([trainAll,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
             if (i)%1 == 0:
                 writer.add_summary(mg,i)
                 print('iter:',i)
