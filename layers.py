@@ -6,7 +6,7 @@ import numpy as np
 
 def weight(shape,inp,outp):
 	#Xavier initialization. To control the std-div of all layers
-	return tf.get_variable('weight',shape,initializer=tf.truncated_normal_initializer())
+	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer())
 
 def bias(shape,value=0.1):
 	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value))
@@ -16,12 +16,16 @@ def bias(shape,value=0.1):
 
 def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None):
 	with tf.variable_scope(name):
-		z = tf.layers.conv2d(x, outchn, [size, size], strides=(stride, stride), padding=pad)
+		z = tf.layers.conv2d(x, outchn, [size, size], strides=(stride, stride), padding=pad,\
+			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
+			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
 def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 	with tf.variable_scope(name):
-		z = tf.layers.conv2d_transpose(x, outchn, [size, size], strides=(stride, stride), padding=pad)
+		z = tf.layers.conv2d_transpose(x, outchn, [size, size], strides=(stride, stride), padding=pad,\
+			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
+			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
 def maxpooling(x,size,name):
@@ -74,7 +78,7 @@ def NIN(x,inchn,outchn1,ksize,outchn2,name,stride=1):
 
 def accuracy(pred,y,name):
 	with tf.variable_scope(name):
-		correct = tf.equal(tf.cast(tf.argmax(pred,1),tf.int32),y)
+		correct = tf.equal(tf.cast(tf.argmax(pred,1),tf.int64),tf.cast(y,tf.int64))
 		acc = tf.reduce_mean(tf.cast(correct,tf.float32))
 		return acc
 
@@ -92,3 +96,11 @@ def tanh(inp,name):
 
 def elu(inp,name):
 	return tf.nn.elu(inp,name=name)
+
+def sparse_softmax_crs_entropy(inp,lab,name):
+	with tf.name_scope(name):
+		loss = tf.reduce_mean(tf.nn.sparse_softmax_crs_entropy(labels=lab,logits=inp))
+		return loss
+
+def sigmoid(inp,name):
+	return tf.sigmoid(inp,name=name)
