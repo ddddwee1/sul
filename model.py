@@ -12,13 +12,16 @@ PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 
-def loadSess(modelpath,sess=None,modpath=None,mods=None):
+def loadSess(modelpath,sess=None,modpath=None,mods=None,var_list=None):
 #load session if there exist any models, and initialize the sess if not
 	assert modpath==None or mods==None
 	if sess==None:
 		sess = tf.Session()
 	sess.run(tf.global_variables_initializer())
-	saver = tf.train.Saver()
+	if var_list==None:
+		saver = tf.train.Saver()
+	else:
+		saver = tf.train.Saver(var_list)
 	ckpt = tf.train.get_checkpoint_state(modelpath)
 	if modpath!=None:
 		mod = modpath
@@ -55,16 +58,37 @@ def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,
 	if enforced:
 		floatlb = tf.cast(lbholder,tf.float32)
 		lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
-		cosmtx = tf.multiply(floatlb,buff)
 		filteredmtx = tf.multiply(lbc,buff)
-		cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.))*floatlb
-		#cosmtx2 = tf.multiply(cosmtx,floatlb)
+		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+		cosmtx = tf.multiply(floatlb,buff)
+		cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.1))*floatlb
 		lstlayer = cosmtx2+filteredmtx
-		# lstlayer = tf.matmul(featurelayer,w)*lstlayer
 		nb = tf.norm(w,axis=0,keep_dims=True)
 		nf = tf.norm(featurelayer,axis=1,keep_dims=True)
 		lstlayer = nb*lstlayer
 		lstlayer = nf*lstlayer
+	else:
+		lstlayer = evallayer
+	return lstlayer,evallayer
+
+def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
+	if enforced:
+		print('Enforced softmax loss is enabled.')
+	featurelayer = tf.nn.dropout(featurelayer,dropout)
+	w = L.weight([inputdim,CLASS])
+	nfl = tf.nn.l2_normalize(featurelayer,1)
+	#nfl = tf.nn.dropout(nfl,dropout)
+	buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
+	constant = tf.get_variable('antenna',shape=[],dtype=tf.float32,initializer=tf.constant_initializer(40.0))
+	evallayer = tf.scalar_mul(constant,buff)
+	if enforced:
+		floatlb = tf.cast(lbholder,tf.float32)
+		lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
+		filteredmtx = tf.multiply(lbc,evallayer)
+		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+		cosmtx = tf.multiply(floatlb,evallayer)
+		cosmtx2 = (tf.minimum(cosmtx*0.8,cosmtx*1.2))*floatlb
+		lstlayer = cosmtx2+filteredmtx
 	else:
 		lstlayer = evallayer
 	return lstlayer,evallayer
@@ -77,6 +101,10 @@ class Model():
 		self.transShape = None
 		self.varlist = []
 		self.fcs = []
+		self.bntraining = True
+
+	def set_bn_training(self,training):
+		self.bntraining = training
 
 	def get_current_layer(self):
 		return self.result
@@ -112,7 +140,7 @@ class Model():
 		self.result = res
 		return [self.result,list(self.inpsize)]
 
-	def convLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None):
+	def convLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True):
 		with tf.variable_scope('conv_'+str(self.layernum)):
 			if isinstance(size,list):
 				kernel = size
@@ -121,10 +149,10 @@ class Model():
 			if layerin!=None:
 				self.result=layerin[0]
 				self.inpsize=list(layerin[1])
-			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad)
+			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias)
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 			self.layernum += 1
 			if pad=='VALID':
 				self.inpsize[1] -= kernel[0]-stride
@@ -133,6 +161,30 @@ class Model():
 			self.inpsize[2] = self.inpsize[2]//stride
 			self.inpsize[3] = outchn
 			self.activate(activation)
+		return [self.result,list(self.inpsize)]
+
+	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False):
+		with tf.variable_scope('dwconv_'+str(self.layernum)):
+			if isinstance(kernel,list):
+				kernel = kernel
+			else:
+				kernel = [kernel,kernel]
+			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad)
+			if batch_norm:
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+			self.layernum+=1
+			if pad=='VALID':
+				self.inpsize[1] -= kernel[0]-stride
+				self.inpsize[2] -= kernel[1]-stride
+			self.inpsize[1] = self.inpsize[1]//stride
+			self.inpsize[2] = self.inpsize[2]//stride
+			self.inpsize[3] = self.inpsize[3]*multi
+			self.activate(activation)
+		return [self.result,list(self.inpsize)]
+
+	def spconvLayer(self,size,multi,stride=1,pad='SAME',activation=-1,batch_norm=False):
+		self.dwconvLayer(size,multi,stride=stride,pad=pad)
+		self.convLayer(1,self.inpsize[3],activation=activation,batch_norm=batch_norm)
 		return [self.result,list(self.inpsize)]
 
 	def deconvLayer(self,kernel,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False):
@@ -260,7 +312,7 @@ class Model():
 
 	def batch_norm(self):
 		with tf.variable_scope('batch_norm'+str(self.layernum)):
-			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 		return [self.result,list(self.inpsize)]
 
 	def convertVariablesToCaffe(self,sess,h5name):
