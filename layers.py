@@ -127,3 +127,7 @@ def sparse_softmax_cross_entropy(inp,lab,name):
 
 def sigmoid(inp,name):
 	return tf.sigmoid(inp,name=name)
+
+def resize_nn(inp,size,name):
+	with tf.name_scope(name):
+		return tf.image.resize_nearest_neighbor(inp,size=(int(size),int(size)))

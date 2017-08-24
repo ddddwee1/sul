@@ -1,5 +1,6 @@
 import layers as L 
 import tensorflow as tf
+import copy
 
 crsentpy = -1
 acc = -1
@@ -190,7 +191,7 @@ class Model():
 	def deconvLayer(self,kernel,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False):
 		self.result = L.deconv2D(self.result,kernel,outchn,'deconv_'+str(self.layernum),stride=stride,pad=pad)
 		if batch_norm:
-			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 		self.layernum+=1
 		self.inpsize[1] *= stride
 		self.inpsize[2] *= stride
@@ -239,13 +240,14 @@ class Model():
 
 	def fcLayer(self,outsize,activation=-1,nobias=False,batch_norm=False):
 		with tf.variable_scope('fc_'+str(self.layernum)):
+			self.inpsize = [i for i in self.inpsize]
 			self.result = L.Fcnn(self.result,self.inpsize[1],outsize,'fc_'+str(self.layernum),nobias=nobias)
 			if len(self.fcs)!=0:
 				if self.fcs[-1] == len(self.varlist):
 					self.transShape[-1] = outsize
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 			self.inpsize[1] = outsize
 			self.activate(activation)
 			self.layernum+=1
@@ -255,6 +257,12 @@ class Model():
 		with tf.variable_scope('scale_'+str(self.layernum)):
 			self.result = self.result * number
 		return [self.result,list(self.inpsize)]
+
+	def multiply(self,layerin):
+		if isinstance(layerin,list):
+			self.result = self.result*layerin[0]
+		else:
+			self.result = self.result*layerin
 
 	def sum(self,layerin):
 		assert layerin[1][2] == self.inpsize[2] and layerin[1][1] == self.inpsize[1]
@@ -295,7 +303,14 @@ class Model():
 			self.inpsize[3] += layersize[3]
 		return [self.result,list(self.inpsize)]
 
-	def set_current_layer(self,layerinfo):
+	def concat_feature(self,layerinfo):
+		with tf.variable_scope('concat'+str(self.layernum)):
+			layerin, layersize = layerinfo[0],list(layerinfo[1])
+			self.result = tf.concat(axis=1,values=[self.result,layerin])
+			self.inpsize[1] += layersize[1]
+		return [self.result,list(self.inpsize)]
+
+	def set_current(self,layerinfo):
 		layerin, layersize = layerinfo[0],layerinfo[1]
 		self.result = layerin
 		self.inpsize = layersize
@@ -315,25 +330,10 @@ class Model():
 			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 		return [self.result,list(self.inpsize)]
 
-	def convertVariablesToCaffe(self,sess,h5name):
-		import caffeconverter as cc
-		import scipy.io as sio 
-		print('varlist:',len(self.varlist))
-		f = open('layers.txt')
-		dt = {}
-		layers = []
-		for line in f:
-			layers.append(line.replace('\n',''))
-		f.close()
-		print('layers:',len(layers))
-		print('variables:',len(self.varlist))
-		for i in range(len(layers)):
-			if i*2 in self.fcs:
-				print('reshape fc layer...')
-				dt[layers[i]+'w'] = cc.reshapeFcWeight(self.varlist[i*2],self.transShape,sess)
-			else:
-				dt[layers[i]+'w'] = sess.run(self.varlist[i*2])
-			dt[layers[i]+'b'] = sess.run(self.varlist[i*2+1])
-		sio.savemat('tfModelVars.mat',dt)
-		cvt = cc.h5converter(h5name)
-		cvt.startConvert()
+	def resize_nn(self,multip):
+		assert self.inpsize[1] == self.inpsize[2]
+		with tf.variable_scope('resize_'+str(self.layernum)):
+			self.result = L.resize_nn(self.result,multip*self.inpsize[1],name='resize_nn_'+str(self.layernum))
+			self.inpsize[1] *= multip
+			self.inpsize[2] *= multip
+		return [self.result,list(self.inpsize)]
