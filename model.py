@@ -13,17 +13,19 @@ PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 
-def loadSess(modelpath,sess=None,modpath=None,mods=None,var_list=None):
+def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=True):
 #load session if there exist any models, and initialize the sess if not
 	assert modpath==None or mods==None
+	assert (not modelpath==None) or (not modpath==None) or (not modpath==None)
 	if sess==None:
 		sess = tf.Session()
-	sess.run(tf.global_variables_initializer())
+	if init:
+		sess.run(tf.global_variables_initializer())
 	if var_list==None:
 		saver = tf.train.Saver()
 	else:
 		saver = tf.train.Saver(var_list)
-	ckpt = tf.train.get_checkpoint_state(modelpath)
+	
 	if modpath!=None:
 		mod = modpath
 		print('loading from model:',mod)
@@ -32,12 +34,15 @@ def loadSess(modelpath,sess=None,modpath=None,mods=None,var_list=None):
 		for m in mods:
 			print('loading from model:',m)
 			saver.restore(sess,m)
-	elif ckpt:
-		mod = ckpt.model_checkpoint_path
-		print('loading from model:',mod)
-		saver.restore(sess,mod)
-	else:
-		print('No checkpoint in folder, use initial graph...')
+	elif modelpath!=None:
+		ckpt = tf.train.get_checkpoint_state(modelpath)
+		if ckpt:
+			mod = ckpt.model_checkpoint_path
+			print('loading from model:',mod)
+			saver.restore(sess,mod)
+		else:
+			sess.run(tf.global_variables_initializer())
+			print('No checkpoint in folder, use initial graph...')
 	return sess
 
 def sparse_softmax_cross_entropy(inp,lab):
@@ -51,48 +56,67 @@ def accuracy(inp,lab):
 	return L.accuracy(inp,lab,'accuracy_'+str(acc))
 
 def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
-	featurelayer = tf.nn.dropout(featurelayer,dropout)
-	w = L.weight([inputdim,CLASS])
-	nfl = tf.nn.l2_normalize(featurelayer,1)
-	buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
-	evallayer = tf.matmul(featurelayer,w)
-	if enforced:
-		floatlb = tf.cast(lbholder,tf.float32)
-		lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
-		filteredmtx = tf.multiply(lbc,buff)
-		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
-		cosmtx = tf.multiply(floatlb,buff)
-		cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.1))*floatlb
-		lstlayer = cosmtx2+filteredmtx
-		nb = tf.norm(w,axis=0,keep_dims=True)
-		nf = tf.norm(featurelayer,axis=1,keep_dims=True)
-		lstlayer = nb*lstlayer
-		lstlayer = nf*lstlayer
-	else:
-		lstlayer = evallayer
+	with tf.variable_scope('Enforced Softmax'):
+		featurelayer = tf.nn.dropout(featurelayer,dropout)
+		w = L.weight([inputdim,CLASS])
+		nfl = tf.nn.l2_normalize(featurelayer,1)
+		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
+		evallayer = tf.matmul(featurelayer,w)
+		if enforced:
+			floatlb = tf.cast(lbholder,tf.float32)
+			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
+			filteredmtx = tf.multiply(lbc,buff)
+			#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+			cosmtx = tf.multiply(floatlb,buff)
+			cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.1))*floatlb
+			lstlayer = cosmtx2+filteredmtx
+			nb = tf.norm(w,axis=0,keep_dims=True)
+			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
+			lstlayer = nb*lstlayer
+			lstlayer = nf*lstlayer
+		else:
+			lstlayer = evallayer
 	return lstlayer,evallayer
 
 def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
-	if enforced:
-		print('Enforced softmax loss is enabled.')
-	featurelayer = tf.nn.dropout(featurelayer,dropout)
-	w = L.weight([inputdim,CLASS])
-	nfl = tf.nn.l2_normalize(featurelayer,1)
-	#nfl = tf.nn.dropout(nfl,dropout)
-	buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
-	constant = tf.get_variable('antenna',shape=[],dtype=tf.float32,initializer=tf.constant_initializer(40.0))
-	evallayer = tf.scalar_mul(constant,buff)
-	if enforced:
-		floatlb = tf.cast(lbholder,tf.float32)
-		lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
-		filteredmtx = tf.multiply(lbc,evallayer)
-		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
-		cosmtx = tf.multiply(floatlb,evallayer)
-		cosmtx2 = (tf.minimum(cosmtx*0.8,cosmtx*1.2))*floatlb
-		lstlayer = cosmtx2+filteredmtx
-	else:
-		lstlayer = evallayer
+	with tf.variable_scope('Enforced Softmax'):
+		if enforced:
+			print('Enforced softmax loss is enabled.')
+		featurelayer = tf.nn.dropout(featurelayer,dropout)
+		w = L.weight([inputdim,CLASS])
+		nfl = tf.nn.l2_normalize(featurelayer,1)
+		#nfl = tf.nn.dropout(nfl,dropout)
+		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
+		constant = tf.get_variable('antenna',shape=[],dtype=tf.float32,initializer=tf.constant_initializer(40.0))
+		evallayer = tf.scalar_mul(constant,buff)
+		if enforced:
+			floatlb = tf.cast(lbholder,tf.float32)
+			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
+			filteredmtx = tf.multiply(lbc,evallayer)
+			#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+			cosmtx = tf.multiply(floatlb,evallayer)
+			cosmtx2 = (tf.minimum(cosmtx*0.8,cosmtx*1.2))*floatlb
+			lstlayer = cosmtx2+filteredmtx
+		else:
+			lstlayer = evallayer
 	return lstlayer,evallayer
+
+def get_feed_dict(keylist,vallist):
+	assert len(keylist)==len(vallist)
+	d = {}
+	for i in range(len(keylist)):
+		print(keylist[i],'\t',type(vallist))
+		d[keylist[i]] = vallist[i]
+	return d
+
+def runSess(sess,tensorlist,feeddict=None):
+	return sess.run(tensorlist,feed_dict=feeddict)
+
+def get_trainable_vars(scope=None):
+	return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope=scope)
+
+def get_update_ops(scope=None):
+	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
 class Model():
 	def __init__(self,inp,size):
@@ -164,13 +188,14 @@ class Model():
 			self.activate(activation)
 		return [self.result,list(self.inpsize)]
 
-	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False):
+
+	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False,weight=None):
 		with tf.variable_scope('dwconv_'+str(self.layernum)):
 			if isinstance(kernel,list):
 				kernel = kernel
 			else:
 				kernel = [kernel,kernel]
-			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad)
+			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad,weight=weight)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
 			self.layernum+=1
@@ -336,4 +361,27 @@ class Model():
 			self.result = L.resize_nn(self.result,multip*self.inpsize[1],name='resize_nn_'+str(self.layernum))
 			self.inpsize[1] *= multip
 			self.inpsize[2] *= multip
+		return [self.result,list(self.inpsize)]
+
+	def reshape(self,shape):
+		with tf.variable_scope('reshape_'+str(self.layernum)):
+			self.result = tf.reshape(self.result,shape)
+			self.inpsize = shape
+		return [self.result,list(self.inpsize)]
+
+	def transpose(self,order):
+		with tf.variable_scope('transpose_'+str(self.layernum)):
+			self.result=tf.transpose(self.result,order)
+			self.inpsize = [self.inpsize[i] for i in order]
+		return [self.result,list(self.inpsize)]
+
+	def gradient_flip_layer(self):
+		with tf.variable_scope('Gradient_flip_'+str(self.layernum)):
+			@tf.RegisterGradient("GradFlip")
+			def _flip_grad(op,grad):
+				return [tf.neg(grad)]
+
+			g = tf.get_default_graph()
+			with g.gradient_override_map({'Identity':'GradFlip'}):
+				self.result = tf.identity(self.result)
 		return [self.result,list(self.inpsize)]
