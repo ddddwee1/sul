@@ -379,9 +379,31 @@ class Model():
 		with tf.variable_scope('Gradient_flip_'+str(self.layernum)):
 			@tf.RegisterGradient("GradFlip")
 			def _flip_grad(op,grad):
-				return [tf.neg(grad)]
+				return [tf.negative(grad)]
 
 			g = tf.get_default_graph()
 			with g.gradient_override_map({'Identity':'GradFlip'}):
 				self.result = tf.identity(self.result)
+		return [self.result,list(self.inpsize)]
+
+	def pyrDown():
+		with tf.variable_scope('Pyramid_down_'+str(self.layernum)):
+			kernel = np.float32([\
+				[1,4 ,6 ,4 ,1],\
+				[4,16,24,16,4],\
+				[6,24,36,24,6],\
+				[4,16,24,16,4],\
+				[1,4 ,6 ,4 ,1]])/256.0
+			channel = self.inpsize[3]
+			kernel = np.repeat(kernel[:,:,np.newaxis],channel,axis=2)
+			kernel = np.expand_dims(kernel,axis=3)
+			kernel = tf.constant(kernel,dtype=tf.float32)
+			with tf.name_scope('gaussian_conv'):
+				self.result = tf.nn.depthwise_conv2D(self.result,kernel,[1,1,1,1],'SAME')
+			kernel = np.float32([[1,0],[0,0]])
+			kernel = np.repeat(kernel[:,:,np.newaxis],channel,axis=2)
+			kernel = np.expand_dims(kernel,axis=3)
+			kernel = tf.constant(kernel,dtype=tf.float32)
+			with tf.name_scope('even_rejecting'):
+				self.result = tf.nn.depthwise_conv2D(self.result,kernel,[1,2,2,1],'SAME')
 		return [self.result,list(self.inpsize)]
