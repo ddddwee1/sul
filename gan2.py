@@ -48,7 +48,6 @@ def dis(inp,inpshape,reuse=False):
         mod.convLayer(5,1024,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
         mod.flatten()
         mod.fcLayer(2)
-        VARS['d'] = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope='Discriminator')
         print (len(VARS['d']))
         return mod.get_current_layer()
 
@@ -65,11 +64,17 @@ with tf.name_scope('lossD'):
     lossD = 0.5*(lossD1+lossD2)
     tf.summary.scalar('lossD',lossD)
 
+#run update_ops for updating the batch_norm
+VARD = M.get_trainable_vars('Discriminator')
+VARG = M.get_trainable_vars('Generator')
+UPDD = M.get_update_ops('Discriminator')
+UPDG = M.get_update_ops('Generator')
+
 with tf.name_scope('opti'):
     with tf.name_scope('optiG'):
-        trainG = tf.train.AdamOptimizer(learning_rate=LR,beta1=BETA).minimize(lossG,var_list=VARS['g'])
+        trainG = tf.train.AdamOptimizer(learning_rate=LR,beta1=BETA).minimize(lossG,var_list=VARG)
     with tf.name_scope('optiD'):
-        trainD = tf.train.AdamOptimizer(learning_rate=LR,beta1=BETA).minimize(lossD,var_list=VARS['d'])
+        trainD = tf.train.AdamOptimizer(learning_rate=LR,beta1=BETA).minimize(lossD,var_list=VARD)
     with tf.control_dependencies([trainG, trainD]):
         trainAll = tf.no_op(name='train')
 
@@ -100,7 +105,7 @@ def training():
             a = np.random.uniform(size=[BSIZE,ZDIM],low=-1.0,high=1.0)
             # for _ in range(3):
                 # sess.run(trainG,feed_dict={z:a})
-            _,mg,lsd,lsg = sess.run([trainAll,merged,lossD,lossG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
+            _,mg,lsd,lsg = sess.run([trainAll,merged,lossD,lossG,UPDD,UPDG],feed_dict={z:a,imgholder:random.sample(imgs,BSIZE)})
             if (i)%1 == 0:
                 writer.add_summary(mg,i)
                 print('iter:',i)

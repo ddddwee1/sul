@@ -21,17 +21,36 @@ def bias(shape,value=0.1):
 # 		z = (tf.nn.conv2d(x,W,strides=[1,stride,stride,1],padding=pad)+b)
 # 		return z
 
-def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True):
+# def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True):
+# 	print('Conv_bias:',usebias)
+# 	# with tf.variable_scope(name):
+# 	if isinstance(size,list):
+# 		kernel = size
+# 	else:
+# 		kernel = [size,size]
+# 	z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+# 		kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
+# 		use_bias=usebias,\
+# 		bias_initializer=tf.constant_initializer(0.1),name=name)
+# 	return z
+
+def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True,kernel_data=None,bias_data=None):
 	print('Conv_bias:',usebias)
 	# with tf.variable_scope(name):
 	if isinstance(size,list):
 		kernel = size
 	else:
 		kernel = [size,size]
-	z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
-		kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
-		use_bias=usebias,\
-		bias_initializer=tf.constant_initializer(0.1),name=name)
+	if (not kernel_data is None) and (not bias_data is None):
+		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+			kernel_initializer=tf.constant_initializer(kernel_data),\
+			use_bias=usebias,\
+			bias_initializer=tf.constant_initializer(bias_data),name=name)
+	else:
+		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
+			use_bias=usebias,\
+			bias_initializer=tf.constant_initializer(0.1),name=name)
 	return z
 
 def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):

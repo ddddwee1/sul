@@ -1,6 +1,7 @@
 import layers as L 
 import tensorflow as tf
 import copy
+import numpy as np 
 
 crsentpy = -1
 acc = -1
@@ -13,7 +14,7 @@ PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 
-def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=True):
+def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=False):
 #load session if there exist any models, and initialize the sess if not
 	assert modpath==None or mods==None
 	assert (not modelpath==None) or (not modpath==None) or (not modpath==None)
@@ -56,7 +57,7 @@ def accuracy(inp,lab):
 	return L.accuracy(inp,lab,'accuracy_'+str(acc))
 
 def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
-	with tf.variable_scope('Enforced Softmax'):
+	with tf.variable_scope('Enforced_Softmax'):
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
 		w = L.weight([inputdim,CLASS])
 		nfl = tf.nn.l2_normalize(featurelayer,1)
@@ -79,7 +80,7 @@ def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,
 	return lstlayer,evallayer
 
 def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
-	with tf.variable_scope('Enforced Softmax'):
+	with tf.variable_scope('Enforced_Softmax'):
 		if enforced:
 			print('Enforced softmax loss is enabled.')
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
@@ -87,7 +88,7 @@ def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False
 		nfl = tf.nn.l2_normalize(featurelayer,1)
 		#nfl = tf.nn.dropout(nfl,dropout)
 		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
-		constant = tf.get_variable('antenna',shape=[],dtype=tf.float32,initializer=tf.constant_initializer(40.0))
+		constant = 40.0
 		evallayer = tf.scalar_mul(constant,buff)
 		if enforced:
 			floatlb = tf.cast(lbholder,tf.float32)
@@ -165,7 +166,7 @@ class Model():
 		self.result = res
 		return [self.result,list(self.inpsize)]
 
-	def convLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True):
+	def convLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None):
 		with tf.variable_scope('conv_'+str(self.layernum)):
 			if isinstance(size,list):
 				kernel = size
@@ -174,7 +175,7 @@ class Model():
 			if layerin!=None:
 				self.result=layerin[0]
 				self.inpsize=list(layerin[1])
-			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias)
+			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data)
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
@@ -386,7 +387,7 @@ class Model():
 				self.result = tf.identity(self.result)
 		return [self.result,list(self.inpsize)]
 
-	def pyrDown():
+	def pyrDown(self,stride=1):
 		with tf.variable_scope('Pyramid_down_'+str(self.layernum)):
 			kernel = np.float32([\
 				[1,4 ,6 ,4 ,1],\
@@ -399,11 +400,5 @@ class Model():
 			kernel = np.expand_dims(kernel,axis=3)
 			kernel = tf.constant(kernel,dtype=tf.float32)
 			with tf.name_scope('gaussian_conv'):
-				self.result = tf.nn.depthwise_conv2D(self.result,kernel,[1,1,1,1],'SAME')
-			kernel = np.float32([[1,0],[0,0]])
-			kernel = np.repeat(kernel[:,:,np.newaxis],channel,axis=2)
-			kernel = np.expand_dims(kernel,axis=3)
-			kernel = tf.constant(kernel,dtype=tf.float32)
-			with tf.name_scope('even_rejecting'):
-				self.result = tf.nn.depthwise_conv2D(self.result,kernel,[1,2,2,1],'SAME')
+				self.result = tf.nn.depthwise_conv2d(self.result,kernel,[1,stride,stride,1],'SAME')
 		return [self.result,list(self.inpsize)]
