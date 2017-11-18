@@ -142,11 +142,6 @@ def tanh(inp,name):
 def elu(inp,name):
 	return tf.nn.elu(inp,name=name)
 
-def sparse_softmax_cross_entropy(inp,lab,name):
-	with tf.name_scope(name):
-		loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=lab,logits=inp))
-		return loss
-
 def sigmoid(inp,name):
 	return tf.sigmoid(inp,name=name)
 

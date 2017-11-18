@@ -10,7 +10,7 @@ import imagelib as IL
 ZDIM = 20
 IMGPIX = 128
 CHN = 1
-TXTFILE = 'avcout.txt'
+TXTFILE = 'list.txt'
 BETA = 0.5
 LR = 0.0002
 BSIZE = 64

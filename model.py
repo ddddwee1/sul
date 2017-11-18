@@ -3,7 +3,6 @@ import tensorflow as tf
 import copy
 import numpy as np 
 
-crsentpy = -1
 acc = -1
 
 PARAM_RELU = 0
@@ -46,23 +45,26 @@ def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=
 			print('No checkpoint in folder, use initial graph...')
 	return sess
 
-def sparse_softmax_cross_entropy(inp,lab):
-	global crsentpy
-	crsentpy+=1
-	return L.sparse_softmax_cross_entropy(inp,lab,'cross_entropy_'+str(crsentpy))
-
 def accuracy(inp,lab):
 	global acc
 	acc +=1
 	return L.accuracy(inp,lab,'accuracy_'+str(acc))
 
-def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
+def enforcedClassifier(featurelayer,CLASS,BSIZE,lbholder,dropout=1,enforced=False,L2norm=False,L2const=10.0):
+	with tf.variable_scope('Enforced_Softmax1'):
+		if enforced:
+			print('Enforced softmax loss is enabled.')
 	with tf.variable_scope('Enforced_Softmax'):
+		inp_shape = featurelayer.get_shape().as_list()
+		inputdim = inp_shape[1]
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
 		w = L.weight([inputdim,CLASS])
 		nfl = tf.nn.l2_normalize(featurelayer,1)
 		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
-		evallayer = tf.matmul(featurelayer,w)
+		if L2norm:
+			evallayer = tf.scalar_mul(L2const,buff)
+		else:
+			evallayer = tf.matmul(featurelayer,w)
 		if enforced:
 			floatlb = tf.cast(lbholder,tf.float32)
 			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
@@ -71,42 +73,42 @@ def enforcedClassfier(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,
 			cosmtx = tf.multiply(floatlb,buff)
 			cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.1))*floatlb
 			lstlayer = cosmtx2+filteredmtx
-			nb = tf.norm(w,axis=0,keep_dims=True)
-			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
-			lstlayer = nb*lstlayer
-			lstlayer = nf*lstlayer
+			if not L2norm:
+				nb = tf.norm(w,axis=0,keep_dims=True)
+				nf = tf.norm(featurelayer,axis=1,keep_dims=True)
+				lstlayer = nb*lstlayer
+				lstlayer = nf*lstlayer
 		else:
 			lstlayer = evallayer
 	return lstlayer,evallayer
 
-def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
-	with tf.variable_scope('Enforced_Softmax'):
-		if enforced:
-			print('Enforced softmax loss is enabled.')
-		featurelayer = tf.nn.dropout(featurelayer,dropout)
-		w = L.weight([inputdim,CLASS])
-		nfl = tf.nn.l2_normalize(featurelayer,1)
-		#nfl = tf.nn.dropout(nfl,dropout)
-		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
-		constant = 40.0
-		evallayer = tf.scalar_mul(constant,buff)
-		if enforced:
-			floatlb = tf.cast(lbholder,tf.float32)
-			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
-			filteredmtx = tf.multiply(lbc,evallayer)
-			#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
-			cosmtx = tf.multiply(floatlb,evallayer)
-			cosmtx2 = (tf.minimum(cosmtx*0.8,cosmtx*1.2))*floatlb
-			lstlayer = cosmtx2+filteredmtx
-		else:
-			lstlayer = evallayer
-	return lstlayer,evallayer
+# def enforcedClassfier2(featurelayer,inputdim,lbholder,BSIZE,CLASS,enforced=False,dropout=1):
+# 	with tf.variable_scope('Enforced_Softmax2'):
+# 		if enforced:
+# 			print('Enforced softmax loss is enabled.')
+# 		featurelayer = tf.nn.dropout(featurelayer,dropout)
+# 		w = L.weight([inputdim,CLASS])
+# 		nfl = tf.nn.l2_normalize(featurelayer,1)
+# 		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
+# 		constant = 40.0
+# 		evallayer = tf.scalar_mul(constant,buff)
+# 		if enforced:
+# 			floatlb = tf.cast(lbholder,tf.float32)
+# 			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
+# 			filteredmtx = tf.multiply(lbc,evallayer)
+# 			#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+# 			cosmtx = tf.multiply(floatlb,evallayer)
+# 			cosmtx2 = (tf.minimum(cosmtx*0.8,cosmtx*1.2))*floatlb
+# 			lstlayer = cosmtx2+filteredmtx
+# 		else:
+# 			lstlayer = evallayer
+# 	return lstlayer,evallayer
 
 def get_feed_dict(keylist,vallist):
 	assert len(keylist)==len(vallist)
 	d = {}
 	for i in range(len(keylist)):
-		print(keylist[i],'\t',type(vallist))
+		# print(keylist[i],'\t',type(vallist))
 		d[keylist[i]] = vallist[i]
 	return d
 
@@ -154,7 +156,6 @@ class Model():
 				res =  L.tanh(inp,name='tanh_'+str(self.layernum))
 			elif param == 4:
 				self.inpsize[-1] = self.inpsize[-1]//2
-				# print('mfmsize',self.inpsize)
 				res =  L.MFM(inp,self.inpsize[-1],name='mfm_'+str(self.layernum))
 			elif param == 5:
 				self.inpsize[-1] = self.inpsize[-1]//2
@@ -180,12 +181,7 @@ class Model():
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 			self.layernum += 1
-			if pad=='VALID':
-				self.inpsize[1] -= kernel[0]-stride
-				self.inpsize[2] -= kernel[1]-stride
-			self.inpsize[1] = self.inpsize[1]//stride
-			self.inpsize[2] = self.inpsize[2]//stride
-			self.inpsize[3] = outchn
+			self.inpsize = self.result.get_shape().as_list()
 			self.activate(activation)
 		return [self.result,list(self.inpsize)]
 
@@ -200,12 +196,7 @@ class Model():
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
 			self.layernum+=1
-			if pad=='VALID':
-				self.inpsize[1] -= kernel[0]-stride
-				self.inpsize[2] -= kernel[1]-stride
-			self.inpsize[1] = self.inpsize[1]//stride
-			self.inpsize[2] = self.inpsize[2]//stride
-			self.inpsize[3] = self.inpsize[3]*multi
+			self.inpsize = self.result.get_shape().as_list()
 			self.activate(activation)
 		return [self.result,list(self.inpsize)]
 
@@ -219,9 +210,7 @@ class Model():
 		if batch_norm:
 			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
 		self.layernum+=1
-		self.inpsize[1] *= stride
-		self.inpsize[2] *= stride
-		self.inpsize[3] = outchn
+		self.inpsize = self.result.get_shape().as_list()
 		self.activate(activation)
 		return [self.result,list(self.inpsize)]
 
@@ -229,27 +218,14 @@ class Model():
 		if stride==None:
 			stride = size
 		self.result = L.maxpooling(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
-		if pad=='VALID':
-			self.inpsize[1] -= size-stride
-			self.inpsize[2] -= size-stride
-		else:
-			if self.inpsize[1]%2==1:
-				self.inpsize[1]+=1
-			if self.inpsize[2]%2==1:
-				self.inpsize[2]+=1
-		self.inpsize[1] = self.inpsize[1]//stride
-		self.inpsize[2] = self.inpsize[2]//stride
+		self.inpsize = self.result.get_shape().as_list()
 		return [self.result,list(self.inpsize)]
 
 	def avgpoolLayer(self,size,pad='SAME',stride=None):
 		if stride==None:
 			stride = size
 		self.result = L.avgpooling(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
-		if pad=='VALID':
-			self.inpsize[1] -= size-stride
-			self.inpsize[2] -= size-stride
-		self.inpsize[1] = self.inpsize[1]//stride
-		self.inpsize[2] = self.inpsize[2]//stride
+		self.inpsize = self.result.get_shape().as_list()
 		return [self.result,list(self.inpsize)]
 
 	def flatten(self):
@@ -321,19 +297,11 @@ class Model():
 			self.result = tf.concat(axis=3,values=[a,b,c])
 			return [self.result,list(self.inpsize)]
 
-	def concat_to_current(self,layerinfo):
+	def concat_to_current(self,layerinfo,axis=3):
 		with tf.variable_scope('concat'+str(self.layernum)):
 			layerin, layersize = layerinfo[0],list(layerinfo[1])
-			assert layersize[2] == self.inpsize[2] and layersize[1]==self.inpsize[1]
-			self.result = tf.concat(axis=3,values=[self.result,layerin])
-			self.inpsize[3] += layersize[3]
-		return [self.result,list(self.inpsize)]
-
-	def concat_feature(self,layerinfo):
-		with tf.variable_scope('concat'+str(self.layernum)):
-			layerin, layersize = layerinfo[0],list(layerinfo[1])
-			self.result = tf.concat(axis=1,values=[self.result,layerin])
-			self.inpsize[1] += layersize[1]
+			self.result = tf.concat(axis=axis,values=[self.result,layerin])
+			self.inpsize[axis] += layersize[axis]
 		return [self.result,list(self.inpsize)]
 
 	def set_current(self,layerinfo):
@@ -346,9 +314,9 @@ class Model():
 			self.result = tf.nn.dropout(self.result,ratio)
 		return [self.result,list(self.inpsize)]
 
-	def l2norm(self):
+	def l2norm(self,axis=1):
 		with tf.name_scope('l2norm'+str(self.layernum)):
-			self.result = tf.nn.l2_normalize(self.result,1)
+			self.result = tf.nn.l2_normalize(self.result,axis)
 		return [self.result,list(self.inpsize)]
 
 	def batch_norm(self):
@@ -401,4 +369,61 @@ class Model():
 			kernel = tf.constant(kernel,dtype=tf.float32)
 			with tf.name_scope('gaussian_conv'):
 				self.result = tf.nn.depthwise_conv2d(self.result,kernel,[1,stride,stride,1],'SAME')
+		return [self.result,list(self.inpsize)]
+
+	def primaryCaps(self, size, vec_dim, n_chn,activation=None, stride=1,pad='SAME'):
+		with tf.variable_scope('Caps_'+str(self.layernum)):
+			self.convLayer(size, vec_dim*n_chn, activation=activation, stride=stride, pad=pad)
+			shape = self.result.get_shape().as_list()
+			self.result = tf.reshape(self.result, [-1,shape[1]*shape[2]*shape[3]//vec_dim,1,vec_dim,1])
+			self.inpsize = self.result.get_shape().as_list()
+			self.squash()
+		return [self.result,list(self.inpsize)]
+
+	def squash(self):
+		with tf.variable_scope('squash_'+str(self.layernum)):
+			sqr = tf.reduce_sum(tf.square(self.result),-2,keep_dims=True)
+			activate = sqr / (1+sqr)
+			self.result = activate * tf.nn.l2_normalize(self.result,-2)
+		return [self.result,list(self.inpsize)]
+
+	def capsLayer(self,outchn,vdim2,iter_num,BSIZE):
+		with tf.variable_scope('capLayer_'+str(self.layernum)):
+			# input size: [BSIZE, capin, 1, vdim1,1]
+			_,capin,_,vdim1,_ = self.inpsize
+			W = L.weight([1,capin,outchn,vdim1,vdim2])
+			W = tf.tile(W,[BSIZE,1,1,1,1])
+			b = tf.constant(0,dtype=tf.float32,shape=[BSIZE,capin,outchn,1,1])
+			res_tile = tf.tile(self.result,[1,1,outchn,1,1])
+			# print('W')
+			# print(W)
+			# print('Res')
+			# print(res_tile)
+			# input()
+			res = tf.matmul(W,res_tile,transpose_a=True)  # [BSIZE, capin, capout, vdim2, 1]
+			for i in range(iter_num):
+				with tf.variable_scope('Routing_'+str(self.layernum)+'_'+str(i)):
+					c = tf.nn.softmax(b,dim=2)
+					self.result = tf.reduce_sum(c*res,1,keep_dims=True)  # [BSIZE, 1, capout, vdim2, 1]
+					self.squash()
+					if i!=iter_num-1:
+						b += tf.reduce_sum(self.result * res, -2, keep_dims=True)
+			self.result = tf.einsum('ijklm->ikjlm',self.result)
+			self.inpsize = [None,outchn,1,vdim2,1]
+			self.layernum += 1
+		return [self.result,list(self.inpsize)]
+
+	def capsDown(self):
+		with tf.variable_scope('Caps_Dim_Down_'+str(self.layernum)):
+			self.result = tf.reduce_sum(self.result,-1)
+			self.result = tf.reduce_sum(self.result,-2)
+			self.inpsize = [None,self.inpsize[1],self.inpsize[3]]
+		return [self.result,list(self.inpsize)]
+
+	def capsMask(self,labholder):
+		with tf.variable_scope('capsMask_'+str(self.layernum)):
+			labholder = tf.expand_dims(labholder,-1)
+			self.result = self.result * labholder
+			self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]])
+			self.inpsize = [None,self.inpsize[1]*self.inpsize[2]]
 		return [self.result,list(self.inpsize)]

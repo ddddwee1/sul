@@ -1,9 +1,7 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import tensorflow as tf 
 import numpy as np 
 import model as M 
-from hd5reader import hd5reader
+# from hd5reader import hd5reader
 import cv2
 
 CLASS = 20000
@@ -60,7 +58,7 @@ def res_18():
 	mod.flatten()
 	featurelayer = mod.get_current_layer()
 	with tf.variable_scope('enforced_layer'):
-		classlayer,evallayer = M.enforcedClassfier(featurelayer,2048,labholder,BSIZE,CLASS,dropout=0.15,enforced=True)
+		classlayer,evallayer = M.enforcedClassifier(featurelayer,CLASS,BSIZE,labholder,dropout=0.15,enforced=True,L2norm=True,L2const=40.0)
 	with tf.name_scope('loss'):
 		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labholder,logits=classlayer))
 		tf.summary.scalar('loss',loss)
@@ -129,4 +127,4 @@ def training(EPOC):
 					saver.save(sess,modelpath+'Epoc'+str(i)+'Iter'+str(x)+'.ckpt')
 				counter +=1
 
-training(100)
+# training(100)
