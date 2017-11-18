@@ -50,13 +50,12 @@ def accuracy(inp,lab):
 	acc +=1
 	return L.accuracy(inp,lab,'accuracy_'+str(acc))
 
-def enforcedClassifier(featurelayer,CLASS,lbholder,enforced=False,dropout=1,L2norm=False,L2const=10.0):
+def enforcedClassifier(featurelayer,CLASS,BSIZE,lbholder,enforced=False,dropout=1,L2norm=False,L2const=10.0):
 	with tf.variable_scope('Enforced_Softmax1'):
 		if enforced:
 			print('Enforced softmax loss is enabled.')
 	with tf.variable_scope('Enforced_Softmax'):
 		inp_shape = tf.shape(featurelayer)
-		BSIZE = inp_shape[0]
 		inputdim = inp_shape[1]
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
 		w = L.weight([inputdim,CLASS])
@@ -109,7 +108,7 @@ def get_feed_dict(keylist,vallist):
 	assert len(keylist)==len(vallist)
 	d = {}
 	for i in range(len(keylist)):
-		print(keylist[i],'\t',type(vallist))
+		# print(keylist[i],'\t',type(vallist))
 		d[keylist[i]] = vallist[i]
 	return d
 
@@ -370,4 +369,61 @@ class Model():
 			kernel = tf.constant(kernel,dtype=tf.float32)
 			with tf.name_scope('gaussian_conv'):
 				self.result = tf.nn.depthwise_conv2d(self.result,kernel,[1,stride,stride,1],'SAME')
+		return [self.result,list(self.inpsize)]
+
+	def primaryCaps(self, size, vec_dim, n_chn,activation=None, stride=1,pad='SAME'):
+		with tf.variable_scope('Caps_'+str(self.layernum)):
+			self.convLayer(size, vec_dim*n_chn, activation=activation, stride=stride, pad=pad)
+			shape = self.result.get_shape().as_list()
+			self.result = tf.reshape(self.result, [-1,shape[1]*shape[2]*shape[3]//vec_dim,1,vec_dim,1])
+			self.inpsize = self.result.get_shape().as_list()
+			self.squash()
+		return [self.result,list(self.inpsize)]
+
+	def squash(self):
+		with tf.variable_scope('squash_'+str(self.layernum)):
+			sqr = tf.reduce_sum(tf.square(self.result),-2,keep_dims=True)
+			activate = sqr / (1+sqr)
+			self.result = activate * tf.nn.l2_normalize(self.result,-2)
+		return [self.result,list(self.inpsize)]
+
+	def capsLayer(self,outchn,vdim2,iter_num,BSIZE):
+		with tf.variable_scope('capLayer_'+str(self.layernum)):
+			# input size: [BSIZE, capin, 1, vdim1,1]
+			_,capin,_,vdim1,_ = self.inpsize
+			W = L.weight([1,capin,outchn,vdim1,vdim2])
+			W = tf.tile(W,[BSIZE,1,1,1,1])
+			b = tf.constant(0,dtype=tf.float32,shape=[BSIZE,capin,outchn,1,1])
+			res_tile = tf.tile(self.result,[1,1,outchn,1,1])
+			# print('W')
+			# print(W)
+			# print('Res')
+			# print(res_tile)
+			# input()
+			res = tf.matmul(W,res_tile,transpose_a=True)  # [BSIZE, capin, capout, vdim2, 1]
+			for i in range(iter_num):
+				with tf.variable_scope('Routing_'+str(self.layernum)+'_'+str(i)):
+					c = tf.nn.softmax(b,dim=2)
+					self.result = tf.reduce_sum(c*res,1,keep_dims=True)  # [BSIZE, 1, capout, vdim2, 1]
+					self.squash()
+					if i!=iter_num-1:
+						b += tf.reduce_sum(self.result * res, -2, keep_dims=True)
+			self.result = tf.einsum('ijklm->ikjlm',self.result)
+			self.inpsize = [None,outchn,1,vdim2,1]
+			self.layernum += 1
+		return [self.result,list(self.inpsize)]
+
+	def capsDown(self):
+		with tf.variable_scope('Caps_Dim_Down_'+str(self.layernum)):
+			self.result = tf.reduce_sum(self.result,-1)
+			self.result = tf.reduce_sum(self.result,-2)
+			self.inpsize = [None,self.inpsize[1],self.inpsize[3]]
+		return [self.result,list(self.inpsize)]
+
+	def capsMask(self,labholder):
+		with tf.variable_scope('capsMask_'+str(self.layernum)):
+			labholder = tf.expand_dims(labholder,-1)
+			self.result = self.result * labholder
+			self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]])
+			self.inpsize = [None,self.inpsize[1]*self.inpsize[2]]
 		return [self.result,list(self.inpsize)]
