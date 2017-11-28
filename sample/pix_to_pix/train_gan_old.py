@@ -139,19 +139,22 @@ def main():
 				gen = sess.run(x_fake,feed_dict=feeddict)
 				show_sample(gen,img_batch,gnd_batch,iteration)
 
-def test_samples(fname):
-	img_batch = []
-	for i in fname:
-		img = cv2.resize(cv2.imread(i),(256,256)).reshape([256,256,3])
-		img = np.float32(img)
-		img = img/127.5 - 1.0
-		img_batch.append(img)
-	holders, losses, upops, trains,x_fake,lb_ls = build_graph(train=False)
-	with tf.Session() as sess:
-		M.loadSess('./model/',sess)
-		gen = sess.run(x_fake,feed_dict={holders[0]:img_batch})
-		show_sample(gen,img_batch,img_batch,0)
 
 main()
+
+# --------------Code below are for testing purpose ------------
+
+# def test_samples(fname):
+# 	img_batch = []
+# 	for i in fname:
+# 		img = cv2.resize(cv2.imread(i),(256,256)).reshape([256,256,3])
+# 		img = np.float32(img)
+# 		img = img/127.5 - 1.0
+# 		img_batch.append(img)
+# 	holders, losses, upops, trains,x_fake,lb_ls = build_graph(train=False)
+# 	with tf.Session() as sess:
+# 		M.loadSess('./model/',sess)
+# 		gen = sess.run(x_fake,feed_dict={holders[0]:img_batch})
+# 		show_sample(gen,img_batch,img_batch,0)
 
 # test_samples(['007_of.jpg','091_of.jpg','153_of.jpg'])
