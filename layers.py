@@ -64,16 +64,16 @@ def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
-def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight=None):
+def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None):
 	with tf.variable_scope(name):
 		if isinstance(size,list):
 			kernel = [size[0],size[1],inshape,multi]
 		else:
 			kernel = [size,size,inshape,multi]
-		if weight==None:
+		if weight_data==None:
 			w = weight(kernel)
 		else:
-			w = weight
+			w = weight_data
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
 	return res
 
