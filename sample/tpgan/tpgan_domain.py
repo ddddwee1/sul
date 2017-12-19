@@ -126,7 +126,7 @@ def globalpath(inp,z,local):
 def fusion_locals(le,re,nse,mth):
 	with tf.variable_scope('fusion_node'):
 		padded_le = tf.pad(le,[[0,0],[24,64],[24,64],[0,0]])
-		padded_re = tf.pad(re,[[0,0],[64,24],[24,64],[0,0]])
+		padded_re = tf.pad(re,[[0,0],[24,64],[64,24],[0,0]])
 		padded_nse = tf.pad(nse,[[0,0],[48,48],[44,44],[0,0]])
 		padded_mth = tf.pad(mth,[[0,0],[70,26],[40,40],[0,0]])
 		ttl = tf.stack([padded_mth , padded_nse , padded_le , padded_re])
