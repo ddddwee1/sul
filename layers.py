@@ -53,6 +53,9 @@ def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True,k
 			bias_initializer=tf.constant_initializer(0.1),name=name)
 	return z
 
+def sum(x,y):
+	return x+y
+
 def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 	with tf.variable_scope(name):
 		if isinstance(size,list):
@@ -147,4 +150,17 @@ def sigmoid(inp,name):
 
 def resize_nn(inp,size,name):
 	with tf.name_scope(name):
-		return tf.image.resize_nearest_neighbor(inp,size=(int(size),int(size)))
+		if isinstance(size,list):
+			return tf.image.resize_nearest_neighbor(inp,size=(int(size[0]),int(size[1])))
+		else:
+			return tf.image.resize_nearest_neighbor(inp,size=(int(size),int(size)))
+
+def upSampling(inp,multiplier,name):
+	b,h,w,c = inp.get_shape().as_list()
+	if isinstance(multiplier,list):
+		h2 = h*multiplier[0]
+		w2 = w*multiplier[1]
+	else:
+		h2 = h*multiplier
+		w2 = w*multiplier
+	return resize_nn(inp,[h2,w2],name)

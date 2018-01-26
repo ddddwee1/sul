@@ -143,6 +143,9 @@ class Model():
 	def get_current(self):
 		return [self.result,list(self.inpsize)]
 
+	def activation(self,param):
+		return self.activate(param)
+
 	def activate(self,param):
 		inp = self.result
 		with tf.name_scope('activation_'+str(self.layernum)):
@@ -426,4 +429,14 @@ class Model():
 			self.result = self.result * labholder
 			self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]])
 			self.inpsize = [None,self.inpsize[1]*self.inpsize[2]]
+		return [self.result,list(self.inpsize)]
+
+	def pad(self,padding):
+		with tf.variable_scope('pad_'+str(self.layernum)):
+			# left, right, top, btm
+			if isinstance(padding,list):
+				self.result = tf.pad(self.result,[[0,0],[padding[0],padding[1]],[padding[2],padding[3]],[0,0]])
+			else:
+				self.result = tf.pad(self.result,[[0,0],[padding,padding],[padding,padding],[0,0]])
+			self.inpsize = self.result.get_shape().as_list()
 		return [self.result,list(self.inpsize)]
