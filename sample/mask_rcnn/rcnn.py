@@ -41,7 +41,17 @@ class MaskRCNN():
 		scale_rpns = list(zip(*scale_rpns))
 		scale_rpns = [tf.concat(a,1) for a in scale_rpns]
 		rpn_logits, rpn_class, rpn_bbox = scale_rpns
-		# TODO: add proposal layer, detection layer and mask layers
+
+		proposal_count = config.POST_NMS_ROIS_INFERENCE
+
+		# proposal_count,nms_threshold,anchors,config=None
+		propLayer = proposal_Layer(proposal_count, config.RPN_NMS_THRESHOLD, self.anchors, config=config)
+
+		rois = propLayer.apply([rpn_class, rpn_bbox])
+		# TODO: add detection layer and mask layers
+
+
+
 
 block_num = 0
 def res_block(mod,kernel_size,channels,stride,with_short):
@@ -113,3 +123,91 @@ class rpn():
 			rpn_bbox = tf.reshape(rpn_bbox,[rpn_bbox.get_shape().as_list()[0],-1,4])
 			self.reuse=True
 		return rpn_logits,rpn_prob,rpn_bbox
+
+class proposal_Layer():
+	def __init__(self,proposal_count,nms_threshold,anchors,config=None):
+		self.config = config
+		self.proposal_count = proposal_count
+		self.nms_threshold = nms_threshold
+		self.anchors = anchors.astype(np.float32)
+
+	def apply(self,inputs):
+		scores = inputs[0][:,:,1]
+		deltas = inputs[1]
+		deltas = deltas * np.reshape(self.config.RPN_BBOX_STD_DEV, [1,1,4])
+		anchors = self.anchors
+
+		pre_nms_limit = min(6000, self.anchors.shape[0])
+
+		ix = tf.nn.top_k(scores, pre_nms_limit, sorted=True).indices
+		scores = self.split_batch([scores,ix], lambda x,y: tf.gather(x,y), self.config.IMAGES_PER_GPU)
+		deltas = self.split_batch([deltas,ix], lambda x,y: tf.gather(x,y), self.config.IMAGES_PER_GPU)
+		anchors = self.split_batch([anchors,ix], lambda x,y: tf.gather(x,y), self.config.IMAGES_PER_GPU)
+
+		boxes = self.split_batch([anchors,deltas], lambda x,y: self.apply_box_deltas_graph(x,y),self.config.IMAGES_PER_GPU)
+
+		h,w = self.config.IMAGE_SHAPE[:2]
+
+		window = np.array([0,0,h,w]).astype(np.float32)
+		boxes = split_batch(boxes, lambda x: self.clip_boxes_graph(x,window),self.config.IMAGES_PER_GPU)
+
+		normalized_boxes = boxes / np.array([[h,w,h,w]])
+
+		proposals = self.split_batch([normalized_boxes, scores], self.nonMax, self.config.IMAGES_PER_GPU)
+		return proposals
+
+
+	def split_batch(self,inputs,graph,bsize):
+		result = []
+		for i in range(bsize):
+			single_img = [k[i] for k in inputs]
+			buff = graph(*single_img[i])
+			result.append(buff)
+		return result
+
+	def apply_box_deltas_graph(self, boxes, deltas):
+		"""Applies the given deltas to the given boxes.
+		boxes: [N, 4] where each row is y1, x1, y2, x2
+		deltas: [N, 4] where each row is [dy, dx, log(dh), log(dw)]
+		"""
+		# Convert to y, x, h, w
+		height = boxes[:, 2] - boxes[:, 0]
+		width = boxes[:, 3] - boxes[:, 1]
+		center_y = boxes[:, 0] + 0.5 * height
+		center_x = boxes[:, 1] + 0.5 * width
+		# Apply deltas
+		center_y += deltas[:, 0] * height
+		center_x += deltas[:, 1] * width
+		height *= tf.exp(deltas[:, 2])
+		width *= tf.exp(deltas[:, 3])
+		# Convert back to y1, x1, y2, x2
+		y1 = center_y - 0.5 * height
+		x1 = center_x - 0.5 * width
+		y2 = y1 + height
+		x2 = x1 + width
+		result = tf.stack([y1, x1, y2, x2], axis=1, name="apply_box_deltas_out")
+		return result
+
+	def clip_boxes_graph(self, boxes, window):
+		"""
+		boxes: [N, 4] each row is y1, x1, y2, x2
+		window: [4] in the form y1, x1, y2, x2
+		"""
+		# Split corners
+		wy1, wx1, wy2, wx2 = tf.split(window, 4)
+		y1, x1, y2, x2 = tf.split(boxes, 4, axis=1)
+		# Clip
+		y1 = tf.maximum(tf.minimum(y1, wy2), wy1)
+		x1 = tf.maximum(tf.minimum(x1, wx2), wx1)
+		y2 = tf.maximum(tf.minimum(y2, wy2), wy1)
+		x2 = tf.maximum(tf.minimum(x2, wx2), wx1)
+		clipped = tf.concat([y1, x1, y2, x2], axis=1, name="clipped_boxes")
+		return clipped
+
+	def nonMax(self,normalized_boxes,scores):
+		indices = tf.image.non_max_suppression(normalized_boxes, scores, self.proposal_count, self.nms_threshold, name="rpn_non_max_suppression")
+		proposals = tf.gather(normalized_boxes, indices)
+		# Pad if needed
+		padding = tf.maximum(self.proposal_count - tf.shape(proposals)[0], 0)
+		proposals = tf.pad(proposals, [(0, padding), (0, 0)])
+		return proposals
