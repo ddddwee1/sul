@@ -122,9 +122,12 @@ def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
 class Model():
-	def __init__(self,inp,size):
+	def __init__(self,inp,size=None):
 		self.result = inp
-		self.inpsize = list(size)
+		if size is None:
+			self.inpsize = inp.get_shape().as_list()
+		else:
+			self.inpsize = list(size)
 		self.layernum = 0
 		self.transShape = None
 		self.varlist = []
@@ -170,7 +173,7 @@ class Model():
 		self.result = res
 		return [self.result,list(self.inpsize)]
 
-	def convLayer(self,size,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None):
+	def convLayer(self,size,outchn,dilation_rate=1,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None):
 		with tf.variable_scope('conv_'+str(self.layernum)):
 			if isinstance(size,list):
 				kernel = size
@@ -179,7 +182,7 @@ class Model():
 			if layerin!=None:
 				self.result=layerin[0]
 				self.inpsize=list(layerin[1])
-			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data)
+			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate)
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
@@ -217,14 +220,14 @@ class Model():
 		self.activate(activation)
 		return [self.result,list(self.inpsize)]
 
-	def maxpoolLayer(self,size,pad='SAME',stride=None):
+	def maxpoolLayer(self,size,stride=None,pad='SAME'):
 		if stride==None:
 			stride = size
 		self.result = L.maxpooling(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
 		self.inpsize = self.result.get_shape().as_list()
 		return [self.result,list(self.inpsize)]
 
-	def avgpoolLayer(self,size,pad='SAME',stride=None):
+	def avgpoolLayer(self,size,stride=None,pad='SAME'):
 		if stride==None:
 			stride = size
 		self.result = L.avgpooling(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
@@ -390,7 +393,9 @@ class Model():
 			self.result = activate * tf.nn.l2_normalize(self.result,-2)
 		return [self.result,list(self.inpsize)]
 
-	def capsLayer(self,outchn,vdim2,iter_num,BSIZE):
+	def capsLayer(self,outchn,vdim2,iter_num,BSIZE=None):
+		if BSIZE is None:
+			BSIZE = self.result.get_shape().as_list()
 		with tf.variable_scope('capLayer_'+str(self.layernum)):
 			# input size: [BSIZE, capin, 1, vdim1,1]
 			_,capin,_,vdim1,_ = self.inpsize
@@ -398,11 +403,6 @@ class Model():
 			W = tf.tile(W,[BSIZE,1,1,1,1])
 			b = tf.constant(0,dtype=tf.float32,shape=[BSIZE,capin,outchn,1,1])
 			res_tile = tf.tile(self.result,[1,1,outchn,1,1])
-			# print('W')
-			# print(W)
-			# print('Res')
-			# print(res_tile)
-			# input()
 			res = tf.matmul(W,res_tile,transpose_a=True)  # [BSIZE, capin, capout, vdim2, 1]
 			for i in range(iter_num):
 				with tf.variable_scope('Routing_'+str(self.layernum)+'_'+str(i)):
@@ -410,7 +410,7 @@ class Model():
 					self.result = tf.reduce_sum(c*res,1,keep_dims=True)  # [BSIZE, 1, capout, vdim2, 1]
 					self.squash()
 					if i!=iter_num-1:
-						b += tf.reduce_sum(self.result * res, -2, keep_dims=True)
+						b = tf.reduce_sum(self.result * res, -2, keep_dims=True)
 			self.result = tf.einsum('ijklm->ikjlm',self.result)
 			self.inpsize = [None,outchn,1,vdim2,1]
 			self.layernum += 1
@@ -440,3 +440,5 @@ class Model():
 				self.result = tf.pad(self.result,[[0,0],[padding,padding],[padding,padding],[0,0]])
 			self.inpsize = self.result.get_shape().as_list()
 		return [self.result,list(self.inpsize)]
+
+	# def caps_conv_layer(self,out_dim,out_channel,)

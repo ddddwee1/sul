@@ -1,11 +1,12 @@
 import tensorflow as tf 
 import numpy as np 
 
+l_num = 0
+
 ###########################################################
 #define weight and bias initialization
 
 def weight(shape):
-	#Xavier initialization. To control the std-div of all layers
 	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer())
 
 def bias(shape,value=0.1):
@@ -14,28 +15,11 @@ def bias(shape,value=0.1):
 ###########################################################
 #define basic layers
 
-# def conv2D(x,size,inchn,outchn,name,stride=1,pad='SAME'):
-# 	with tf.variable_scope(name):
-# 		W = weight([size,size,inchn,outchn])
-# 		b = bias([outchn])
-# 		z = (tf.nn.conv2d(x,W,strides=[1,stride,stride,1],padding=pad)+b)
-# 		return z
-
-# def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True):
-# 	print('Conv_bias:',usebias)
-# 	# with tf.variable_scope(name):
-# 	if isinstance(size,list):
-# 		kernel = size
-# 	else:
-# 		kernel = [size,size]
-# 	z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
-# 		kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
-# 		use_bias=usebias,\
-# 		bias_initializer=tf.constant_initializer(0.1),name=name)
-# 	return z
-
-def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True,kernel_data=None,bias_data=None):
+def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',activation=None,usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
 	print('Conv_bias:',usebias)
+	if name is None:
+		name = 'conv_l_'+str(l_num)
+		l_num+=1
 	# with tf.variable_scope(name):
 	if isinstance(size,list):
 		kernel = size
@@ -43,11 +27,13 @@ def conv2D(x,size,outchn,name,stride=1,pad='SAME',activation=None,usebias=True,k
 		kernel = [size,size]
 	if (not kernel_data is None) and (not bias_data is None):
 		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+			dilation_rate=dilation_rate,\
 			kernel_initializer=tf.constant_initializer(kernel_data),\
 			use_bias=usebias,\
 			bias_initializer=tf.constant_initializer(bias_data),name=name)
 	else:
 		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+			dilation_rate=dilation_rate,\
 			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
 			use_bias=usebias,\
 			bias_initializer=tf.constant_initializer(0.1),name=name)
@@ -80,12 +66,22 @@ def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None):
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
 	return res
 
-def maxpooling(x,size,stride,name,pad='SAME'):
+def maxpooling(x,size,stride=None,name=None,pad='SAME'):
+	if name is None:
+		name = 'maxpooling_l_'+str(l_num)
+		l_num+=1
 	with tf.variable_scope(name):
+		if stride is None:
+			stride = size
 		return tf.nn.max_pool(x,ksize=[1,size,size,1],strides=[1,stride,stride,1],padding=pad)
 
-def avgpooling(x,size,stride,name,pad='SAME'):
+def avgpooling(x,size,stride=None,name=None,pad='SAME'):
+	if name is None:
+		name = 'avgpooling_l_'+str(l_num)
+		l_num+=1
 	with tf.variable_scope(name):
+		if stride is None:
+			stride = size
 		return tf.nn.avg_pool(x,ksize=[1,size,size,1],strides=[1,stride,stride,1],padding=pad)
 
 def Fcnn(x,insize,outsize,name,activation=None,nobias=False):
@@ -152,6 +148,8 @@ def resize_nn(inp,size,name):
 	with tf.name_scope(name):
 		if isinstance(size,list):
 			return tf.image.resize_nearest_neighbor(inp,size=(int(size[0]),int(size[1])))
+		elif isinstance(size,tf.Tensor):
+			return tf.image.resize_nearest_neighbor(inp,size=size)
 		else:
 			return tf.image.resize_nearest_neighbor(inp,size=(int(size),int(size)))
 
