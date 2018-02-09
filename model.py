@@ -118,6 +118,9 @@ def runSess(sess,tensorlist,feeddict=None):
 def get_trainable_vars(scope=None):
 	return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope=scope)
 
+def get_all_vars(scope=None):
+	return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope=scope)
+
 def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
