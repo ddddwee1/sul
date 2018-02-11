@@ -125,8 +125,10 @@ def accuracy(pred,y,name):
 		#acc = tf.cast(correct,tf.float32)
 		return acc
 
-def batch_norm(inp,name,training=True):
+def batch_norm(inp,name,epsilon=None,variance=None,training=True):
 	print('BN training:',training)
+	if not epsilon is None:
+		return tf.layers.batch_normalization(inp,training=training,name=name,epsilon=epsilon)
 	return tf.layers.batch_normalization(inp,training=training,name=name)
 
 def lrelu(x,name,leaky=0.2):

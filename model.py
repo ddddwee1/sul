@@ -140,6 +140,9 @@ class Model():
 	def set_bn_training(self,training):
 		self.bntraining = training
 
+	def set_bn_epsilon(self,epsilon):
+		self.epsilon = epsilon
+
 	def get_current_layer(self):
 		return self.result
 
@@ -188,7 +191,7 @@ class Model():
 			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate)
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 			self.layernum += 1
 			self.inpsize = self.result.get_shape().as_list()
 			self.activate(activation)
@@ -203,7 +206,7 @@ class Model():
 				kernel = [kernel,kernel]
 			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad,weight_data=weight)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum))
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),epsilon=self.epsilon)
 			self.layernum+=1
 			self.inpsize = self.result.get_shape().as_list()
 			self.activate(activation)
@@ -217,7 +220,7 @@ class Model():
 	def deconvLayer(self,kernel,outchn,stride=1,pad='SAME',activation=-1,batch_norm=False):
 		self.result = L.deconv2D(self.result,kernel,outchn,'deconv_'+str(self.layernum),stride=stride,pad=pad)
 		if batch_norm:
-			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
+			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 		self.layernum+=1
 		self.inpsize = self.result.get_shape().as_list()
 		self.activate(activation)
@@ -258,7 +261,7 @@ class Model():
 					self.transShape[-1] = outsize
 			self.varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 			self.inpsize[1] = outsize
 			self.activate(activation)
 			self.layernum+=1
@@ -330,7 +333,7 @@ class Model():
 
 	def batch_norm(self):
 		with tf.variable_scope('batch_norm'+str(self.layernum)):
-			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining)
+			self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 		return [self.result,list(self.inpsize)]
 
 	def resize_nn(self,multip):
