@@ -45,6 +45,9 @@ def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=
 			print('No checkpoint in folder, use initial graph...')
 	return sess
 
+def initialize(sess):
+	sess.run(tf.global_variables_initializer())
+
 def accuracy(inp,lab):
 	global acc
 	acc +=1
@@ -314,6 +317,15 @@ class Model():
 			layerin, layersize = layerinfo[0],list(layerinfo[1])
 			self.result = tf.concat(axis=axis,values=[self.result,layerin])
 			self.inpsize[axis] += layersize[axis]
+		return [self.result,list(self.inpsize)]
+
+	def concat_to_all_batch(self,layerinfo):
+		with tf.variable_scope('concat'+str(self.layernum)):
+			layerin, layersize = layerinfo[0],list(layerinfo[1])
+			layerin = tf.expand_dims(layerin,0)
+			layerin = tf.tile(layerin,[tf.shape(self.result)[0],1,1,1])
+			self.result = tf.concat(axis=-1,values=[self.result,layerin])
+			self.inpsize[-1] += layersize[-1]
 		return [self.result,list(self.inpsize)]
 
 	def set_current(self,layerinfo):

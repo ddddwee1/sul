@@ -16,6 +16,7 @@ def bias(shape,value=0.1):
 #define basic layers
 
 def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',activation=None,usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
+	global l_num
 	print('Conv_bias:',usebias)
 	if name is None:
 		name = 'conv_l_'+str(l_num)
@@ -67,6 +68,7 @@ def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None):
 	return res
 
 def maxpooling(x,size,stride=None,name=None,pad='SAME'):
+	global l_num
 	if name is None:
 		name = 'maxpooling_l_'+str(l_num)
 		l_num+=1
@@ -76,6 +78,7 @@ def maxpooling(x,size,stride=None,name=None,pad='SAME'):
 		return tf.nn.max_pool(x,ksize=[1,size,size,1],strides=[1,stride,stride,1],padding=pad)
 
 def avgpooling(x,size,stride=None,name=None,pad='SAME'):
+	global l_num
 	if name is None:
 		name = 'avgpooling_l_'+str(l_num)
 		l_num+=1
