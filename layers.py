@@ -54,7 +54,7 @@ def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
-def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtype=None):
+def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtype=None,usebias=True):
 	if dtype is None:
 		dtype = x.dtype
 	with tf.variable_scope(name):
@@ -67,6 +67,9 @@ def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtyp
 		else:
 			w = weight_data
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
+		if usebias:
+			b = bias([1,1,1,inshape*multi])
+			res += b
 	return res
 
 def maxpooling(x,size,stride=None,name=None,pad='SAME'):

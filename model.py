@@ -176,13 +176,13 @@ class Model():
 			self.activate(activation)
 		return self.result
 
-	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False,weight=None):
+	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False,weight=None,usebias=True):
 		with tf.variable_scope('dwconv_'+str(self.layernum)):
 			if isinstance(kernel,list):
 				kernel = kernel
 			else:
 				kernel = [kernel,kernel]
-			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad,weight_data=weight)
+			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad,weight_data=weight,usebias=usebias)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),epsilon=self.epsilon)
 			self.layernum+=1
@@ -222,7 +222,6 @@ class Model():
 		self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]])
 		self.transShape = [self.inpsize[1],self.inpsize[2],self.inpsize[3],0]
 		self.inpsize = [None,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]]
-		self.fcs.append(len(self.varlist))
 		return self.result
 
 	def construct(self,shape):
@@ -419,7 +418,8 @@ class Model():
 			self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
-	def caps_conv(self,ksize,outdim,outcaps,stride=1,activation='l2'):
+	def caps_conv(self,ksize,outdim,outcaps,stride=1,activation='l2',usebias=True):
+		print('Caps_conv_bias:',usebias)
 		# resize the input to [BSIZE, height, width, capsnum, vecdim]
 		capsnum = self.inpsize[3]
 		vecdim = self.inpsize[4]
@@ -432,10 +432,14 @@ class Model():
 					buff = tf.nn.conv3d(self.result , k , stride_ , 'SAME')
 					res.append(buff)
 			self.result = tf.concat(res, axis=3)
+			if usebias:
+				b = L.bias([1,1,1,outcaps,outdim])
+				self.result += b
+			if activation=='l2':
+				self.result = tf.nn.l2_normalize(self.result,-1)
 		self.layernum += 1
 		self.inpsize = self.result.get_shape().as_list()
-		if activation=='l2':
-			self.result = tf.nn.l2_normalize(self.result,-1)
+		
 		return self.result
 
 	def capsulization(self,dim,caps):

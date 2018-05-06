@@ -78,5 +78,5 @@ with tf.Session() as sess:
 				ac = sess.run(accuracy,feed_dict={inph:x_train, labh:y_train})
 				acttl += ac
 			print('Test acc:',acttl/100)
-		if iteration % 400 == 0:
+		if iteration % 400 == 0 and iteration>0:
 			saver.save(sess,'./model/caps_model_iter%d.ckpt'%(iteration))
