@@ -6,16 +6,16 @@ l_num = 0
 ###########################################################
 #define weight and bias initialization
 
-def weight(shape,dtype=None):
-	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
+def weight(shape):
+	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer())
 
-def bias(shape,value=0.1,dtype=None):
-	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
+def bias(shape,value=0.1):
+	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value))
 
 ###########################################################
 #define basic layers
 
-def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
+def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',activation=None,usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
 	global l_num
 	print('Conv_bias:',usebias)
 	if name is None:
@@ -54,16 +54,14 @@ def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
-def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtype=None):
-	if dtype is None:
-		dtype = x.dtype
+def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None):
 	with tf.variable_scope(name):
 		if isinstance(size,list):
 			kernel = [size[0],size[1],inshape,multi]
 		else:
 			kernel = [size,size,inshape,multi]
 		if weight_data==None:
-			w = weight(kernel,dtype=dtype)
+			w = weight(kernel)
 		else:
 			w = weight_data
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
@@ -89,20 +87,18 @@ def avgpooling(x,size,stride=None,name=None,pad='SAME'):
 			stride = size
 		return tf.nn.avg_pool(x,ksize=[1,size,size,1],strides=[1,stride,stride,1],padding=pad)
 
-def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
-	if dtype is None:
-		dtype = x.dtype
+def Fcnn(x,insize,outsize,name,activation=None,nobias=False):
 	with tf.variable_scope(name):
 		if nobias:
 			print('No biased fully connected layer is used!')
-			W = weight([insize,outsize],dtype=dtype)
+			W = weight([insize,outsize])
 			tf.summary.histogram(name+'/weight',W)
 			if activation==None:
 				return tf.matmul(x,W)
 			return activation(tf.matmul(x,W))
 		else:
-			W = weight([insize,outsize],dtype=dtype)
-			b = bias([outsize],dtype=dtype)
+			W = weight([insize,outsize])
+			b = bias([outsize])
 			tf.summary.histogram(name+'/weight',W)
 			tf.summary.histogram(name+'/bias',b)
 			if activation==None:
