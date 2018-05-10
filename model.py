@@ -287,9 +287,12 @@ class Model():
 		return self.result
 
 	def set_current(self,layerinfo):
-		layerin, layersize = layerinfo[0],layerinfo[1]
-		self.result = layerin
-		self.inpsize = layersize
+		if isinstance(layerinfo,list):
+			self.result = layerinfo[0]
+			self.inpsize = layerinfo[1]
+		else:
+			self.result = layerinfo
+			self.inpsize = self.result.get_shape().as_list()
 
 	def dropout(self,ratio):
 		with tf.name_scope('dropout'+str(self.layernum)):
