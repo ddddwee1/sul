@@ -123,6 +123,9 @@ class Model():
 	def set_bn_epsilon(self,epsilon):
 		self.epsilon = epsilon
 
+	def get_current(self):
+		return self.get_current_layer()
+
 	def get_current_layer(self):
 		return self.result
 
