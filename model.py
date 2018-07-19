@@ -187,7 +187,7 @@ class Model():
 				kernel = [kernel,kernel]
 			self.result = L.conv2Ddw(self.result,self.inpsize[3],kernel,multi,'dwconv_'+str(self.layernum),stride=stride,pad=pad,weight_data=weight,usebias=usebias)
 			if batch_norm:
-				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),epsilon=self.epsilon)
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 			self.layernum+=1
 			self.inpsize = self.result.get_shape().as_list()
 			self.activate(activation)
