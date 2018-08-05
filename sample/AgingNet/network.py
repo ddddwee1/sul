@@ -9,6 +9,10 @@ reuse_gen = False
 reuse_dis = False
 reuse_feat = False
 reuse_dis2 = False
+reuse_dis_f = False
+reuse_genatt = False
+reuse_agecls = False
+reuse_agecls_r = False
 reuse_age_enc = {}
 
 def feat_encoder(inp):
@@ -24,7 +28,6 @@ def feat_encoder(inp):
 		mod.convLayer(3,256,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #8
 		mod.convLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
 		mod.convLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #2
-		mod.flatten()
 		reuse_enc = True
 	return mod.get_current_layer()
 
@@ -59,21 +62,24 @@ def generator(inp):
 		reuse_gen = True
 	return mod.get_current_layer()
 
-def discriminator(inp):
+def discriminator(inp,age_size):
 	global reuse_dis,bn_training
 	with tf.variable_scope('discriminator',reuse=reuse_dis):
 		mod = M.Model(inp)
 		mod.set_bn_training(bn_training)
-		mod.convLayer(7,16,stride=4,activation=M.PARAM_LRELU,batch_norm=True) # 32
+		mod.convLayer(7,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 32
 		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 16
 		mod.SelfAttention(4)
 		mod.convLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 8
-		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 4 
-		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 2
+		feat = mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 4 
+		adv = mod.convLayer(3,1)
+		mod.set_current_layer(feat)
+		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
 		mod.flatten()
-		mod.fcLayer(1)
+		mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
+		age = mod.fcLayer(age_size)
 		reuse_dis = True
-	return mod.get_current_layer()
+	return adv,age
 
 def discriminator_feature(inp):
 	global reuse_dis2,bn_training
@@ -102,3 +108,59 @@ def attention_blk(features):
 		reuse_att = True
 	return mod.get_current_layer()
 
+def discriminator_f(inp,id_num):
+	global reuse_dis_f,bn_training
+	with tf.variable_scope('dis_f',reuse=reuse_dis_f):
+		mod = M.Model(inp)
+		mod.set_bn_training(bn_training)
+		mod.flatten()
+		mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
+		feat = mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
+		adv = mod.fcLayer(1)
+		mod.set_current_layer(feat)
+		ip = mod.fcLayer(id_num)
+		reuse_dis_f = True
+	return adv,ip
+
+def generator_att(inp):
+	global reuse_genatt,bn_training
+	with tf.variable_scope('gen_att',reuse=reuse_genatt):
+		mod = M.Model(inp)
+		mod.set_bn_training(bn_training)
+		mod.deconvLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
+		mod.deconvLayer(3,256,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #8
+		mod.deconvLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #16
+		mod.SelfAttention(32)
+		mod.deconvLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #32
+		mod.deconvLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
+		feat = mod.deconvLayer(5,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #128
+		A = mod.convLayer(5,3,activation=M.PARAM_SIGMOID) #output_attention
+		mod.set_current_layer(feat)
+		C = mod.convLayer(5,3,activation=M.PARAM_TANH)
+		reuse_genatt = True
+	return A,C
+
+def age_classify(inp,age_size):
+	global reuse_agecls, bn_training
+	with tf.variable_scope('age_cls',reuse=reuse_agecls):
+		mod = M.Model(inp)
+		mod.set_bn_training(bn_training)
+		mod.flatten()
+		mod.fcLayer(512,activation=M.PARAM_LRELU)
+		mod.fcLayer(256,activation=M.PARAM_LRELU)
+		mod.fcLayer(age_size)
+		reuse_agecls = True
+	return mod.get_current_layer()
+
+def age_classify_r(inp,age_size):
+	global reuse_agecls_r, bn_training
+	with tf.variable_scope('age_cls_r',reuse=reuse_agecls_r):
+		mod = M.Model(inp)
+		mod.set_bn_training(bn_training)
+		mod.gradient_flip_layer()
+		mod.flatten()
+		mod.fcLayer(512,activation=M.PARAM_LRELU)
+		mod.fcLayer(256,activation=M.PARAM_LRELU)
+		mod.fcLayer(age_size)
+		reuse_agecls = True
+	return mod.get_current_layer()

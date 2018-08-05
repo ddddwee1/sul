@@ -1,6 +1,7 @@
 import tensorflow as tf 
 import dyn.model_attention as M 
 import network as N 
+import numpy as np 
 
 class AgingNet():
 	def __init__(self,training=True):
