@@ -32,6 +32,9 @@ def feat_encoder(inp):
 		reuse_enc = True
 	return mod.get_current_layer()
 
+def res_block(mod):
+	pass
+
 def age_encoder(inp,ind):
 	global reuse_age_enc
 	name = 'decoder'+str(ind)
@@ -115,8 +118,7 @@ def discriminator_f(inp,id_num):
 		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.flatten()
-		mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
-		feat = mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
+		feat = mod.get_current_layer()
 		adv = mod.fcLayer(1)
 		mod.set_current_layer(feat)
 		ip = mod.fcLayer(id_num)
@@ -154,8 +156,8 @@ def age_classify(inp,age_size):
 	return mod.get_current_layer()
 
 def age_classify_r(inp,age_size):
-	global reuse_agecls_r, bn_training
-	with tf.variable_scope('age_cls_r',reuse=reuse_agecls_r):
+	global reuse_agecls, bn_training
+	with tf.variable_scope('age_cls',reuse=reuse_agecls):
 		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.gradient_flip_layer()
