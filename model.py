@@ -2,6 +2,7 @@ import layers as L
 import tensorflow as tf
 import copy
 import numpy as np 
+import os 
 
 acc = -1
 
@@ -20,6 +21,8 @@ def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=
 	if sess==None:
 		sess = tf.Session()
 	if init:
+		if not os.path.exists(modelpath):
+			os.mkdir(modelpath)
 		sess.run(tf.global_variables_initializer())
 	if var_list==None:
 		saver = tf.train.Saver()
