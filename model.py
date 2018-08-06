@@ -300,6 +300,9 @@ class Model():
 			self.result = layerinfo
 			self.inpsize = self.result.get_shape().as_list()
 
+	def set_current_layer(self,layerinfo):
+		self.set_current(layerinfo)
+
 	def dropout(self,ratio):
 		with tf.name_scope('dropout'+str(self.layernum)):
 			self.result = tf.nn.dropout(self.result,ratio)
