@@ -1,5 +1,6 @@
 import tensorflow as tf 
-import dyn.model_attention as M 
+from dyn import model_attention as Model
+import model as M
 
 bn_training = True
 
@@ -18,7 +19,7 @@ reuse_age_enc = {}
 def feat_encoder(inp):
 	global reuse_enc,bn_training
 	with tf.variable_scope('encoder',reuse=reuse_enc):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.convLayer(5,16,stride=1,activation=M.PARAM_LRELU,batch_norm=True) #128
 		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
@@ -39,7 +40,7 @@ def age_encoder(inp,ind):
 	else:
 		reuse = True
 	with tf.variable_scope(name,reuse=reuse):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.fcLayer(2*2*512,activation=M.PARAM_RELU)
 		mod.SelfAttention(is_fc=True,residual=True)
 		reuse_age_enc[name] = 1
@@ -48,7 +49,7 @@ def age_encoder(inp,ind):
 def generator(inp):
 	global reuse_gen,bn_training
 	with tf.variable_scope('generator',reuse=reuse_gen):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.reshape([-1,2,2,512])
 		mod.deconvLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
@@ -65,7 +66,7 @@ def generator(inp):
 def discriminator(inp,age_size):
 	global reuse_dis,bn_training
 	with tf.variable_scope('discriminator',reuse=reuse_dis):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.convLayer(7,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 32
 		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 16
@@ -84,7 +85,7 @@ def discriminator(inp,age_size):
 def discriminator_feature(inp):
 	global reuse_dis2,bn_training
 	with tf.variable_scope('discriminator_feature',reuse=reuse_dis2):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.fcLayer(256,activation=M.PARAM_LRELU,batch_norm=True)
 		mod.fcLayer(64,activation=M.PARAM_LRELU,batch_norm=True)
@@ -101,7 +102,7 @@ def attention_blk(features):
 		BSIZE = tf.shape(features[0])
 		q0 = tf.tile(q0,[BSIZE,1])
 
-		mod = M.Model(q0)
+		mod = Model(q0)
 		mod.QAttention(features)
 		mod.fcLayer(f_dim,activation=M.PARAM_TANH)
 		mod.QAttention(features)
@@ -111,7 +112,7 @@ def attention_blk(features):
 def discriminator_f(inp,id_num):
 	global reuse_dis_f,bn_training
 	with tf.variable_scope('dis_f',reuse=reuse_dis_f):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.flatten()
 		mod.fcLayer(512,activation=M.PARAM_LRELU,batch_norm=True)
@@ -125,7 +126,7 @@ def discriminator_f(inp,id_num):
 def generator_att(inp):
 	global reuse_genatt,bn_training
 	with tf.variable_scope('gen_att',reuse=reuse_genatt):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.deconvLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
 		mod.deconvLayer(3,256,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #8
@@ -143,7 +144,7 @@ def generator_att(inp):
 def age_classify(inp,age_size):
 	global reuse_agecls, bn_training
 	with tf.variable_scope('age_cls',reuse=reuse_agecls):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.flatten()
 		mod.fcLayer(512,activation=M.PARAM_LRELU)
@@ -155,7 +156,7 @@ def age_classify(inp,age_size):
 def age_classify_r(inp,age_size):
 	global reuse_agecls_r, bn_training
 	with tf.variable_scope('age_cls_r',reuse=reuse_agecls_r):
-		mod = M.Model(inp)
+		mod = Model(inp)
 		mod.set_bn_training(bn_training)
 		mod.gradient_flip_layer()
 		mod.flatten()

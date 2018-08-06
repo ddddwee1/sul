@@ -43,7 +43,7 @@ class model_attention(M.Model):
 			if is_fc:
 				out = tf.reshape(out,[-1,orig_num])
 			else:
-				out = tf.reshape(out,current_shape[:3]+[orig_num])
+				out = tf.reshape(out,[-1]+current_shape[1:3]+[orig_num])
 			if residual:
 				out = out + current
 			self.layernum+=1

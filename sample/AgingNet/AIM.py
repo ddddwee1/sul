@@ -1,5 +1,5 @@
 import tensorflow as tf 
-import dyn.model_attention as M 
+import model as M 
 import network as N 
 import numpy as np 
 
@@ -36,15 +36,19 @@ class AIM():
 		ai2 = N.age_classify(self.feat,age_size)
 
 		# call loss builder functions
+		print('Building losses...')
 		self.build_loss_mc()
 		self.build_loss_adv1(adv1,adv1_uni)
 		self.build_loss_ip(ip)
 		self.build_loss_adv2(adv2,adv2_real)
 		self.build_loss_ae(age_pred,age_pred_real)
 		self.build_loss_ai1(ai1)
-		self.build_loss_ai2(ai2)
+		self.build_loss_ai2(ai2,age_size)
 		self.build_loss_A()
 		self.update_ops()
+
+		self.sess = tf.Session()
+		M.loadSess('./aim_model/',self.sess,init=True)
 
 	def build_loss_mc(self):
 		self.mc_loss = tf.reduce_mean(tf.abs(self.generated - self.target_holder))
@@ -65,7 +69,7 @@ class AIM():
 
 		train_adv1_d = tf.train.AdamOptimizer(0.0001).minimize(self.adv1_loss_d,\
 			var_list=M.get_all_vars('dis_f'))
-		train_adv1_g = tf.train.AdamOptimizer(0,0001).minimize(self.adv1_loss_g,\
+		train_adv1_g = tf.train.AdamOptimizer(0.0001).minimize(self.adv1_loss_g,\
 			var_list=M.get_all_vars('encoder'))
 
 		with tf.control_dependencies([train_adv1_g,train_adv1_d]):
@@ -74,7 +78,7 @@ class AIM():
 	def build_loss_ip(self,ip):
 		self.ip_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=ip,labels=self.id_holder))
 
-		self.train_ip = tf.AdamOptimizer(0.0001).minimize(self.ip_loss)
+		self.train_ip = tf.train.AdamOptimizer(0.0001).minimize(self.ip_loss)
 
 	def build_loss_adv2(self,adv2,adv2_real):
 		adv2_loss1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2,labels=tf.zeros_like(adv2)))
@@ -123,7 +127,7 @@ class AIM():
 	def build_loss_A(self):
 		tv_loss = tf.reduce_mean(tf.image.total_variation(self.A))
 		l2_reg = tf.reduce_mean(tf.square(self.A))
-		self.loss_A = tv_loss + l2_reg
+		self.loss_A = tv_loss / (128*128) + l2_reg
 		self.train_A = tf.train.AdamOptimizer(0.0001).minimize(self.loss_A,\
 			var_list=M.get_all_vars('gen_att'))
 
@@ -145,7 +149,7 @@ class AIM():
 
 		fetches = [self.mc_loss, self.adv1_loss_g, self.adv1_loss_d, self.ip_loss,\
 		self.adv2_loss_g, self.adv2_loss_d, self.age_cls_loss, self.age_generate_loss,\
-		self.ai1_loss, self.ai2_cls_loss, self.ai2_enc_loss, self.loss_A\
+		self.ai1_loss, self.ai2_cls_loss, self.ai2_enc_loss, self.loss_A,\
 		self.train_mc, self.train_adv1, self.train_adv2, self.train_ip, self.train_ae,\
 		self.train_ai1, self.train_ai2, self.train_A, self.update_bn,\
 		self.generated]
