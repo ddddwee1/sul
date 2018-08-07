@@ -16,24 +16,52 @@ reuse_agecls = False
 reuse_agecls_r = False
 reuse_age_enc = {}
 
+blknum = 0
+
 def feat_encoder(inp):
 	global reuse_enc,bn_training
 	with tf.variable_scope('encoder',reuse=reuse_enc):
 		mod = Model(inp)
 		mod.set_bn_training(bn_training)
-		mod.convLayer(5,16,stride=1,activation=M.PARAM_LRELU,batch_norm=True) #128
-		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
-		mod.convLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #32
-		mod.convLayer(5,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #16
+		mod.convLayer(7,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
+		mod.maxpoolLayer(3,stride=2) # 32
+		mod.convLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 16
+		block(mod,256,2) # 8
+		block(mod,256,1)
+		block(mod,256,1)
 		mod.SelfAttention(32)
-		mod.convLayer(3,256,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #8
-		mod.convLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
-		mod.convLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #2
+		block(mod,256,2) # 4
+		block(mod,256,1) 
+		block(mod,256,1)
+		mod.SelfAttention(32)
+		block(mod,512,2) # 2
+		block(mod,512,1)
+		block(mod,512,1)
 		reuse_enc = True
 	return mod.get_current_layer()
 
-def res_block(mod):
-	pass
+def block(mod,output,stride):
+	global blknum
+	with tf.variable_scope('block'+str(blknum)):
+		inp = mod.get_current().get_shape().as_list()[-1]
+		aa = mod.get_current()
+		if inp==output:
+			if stride==1:
+				l0 = mod.get_current()
+			else:
+				l0 = mod.maxpoolLayer(stride)
+		else:
+			l0 = mod.convLayer(1,output,activation=M.PARAM_RELU,stride=stride)
+		mod.set_current_layer(aa)
+		mod.batch_norm()
+		mod.activate(M.PARAM_RELU)
+		mod.convLayer(1,output//4,activation=M.PARAM_RELU,batch_norm=True,stride=stride)
+		mod.convLayer(3,output//4,activation=M.PARAM_RELU,batch_norm=True)
+		mod.convLayer(1,output)
+		mod.sum(l0)
+		blknum+=1
+	return mod
+
 
 def age_encoder(inp,ind):
 	global reuse_age_enc
@@ -63,6 +91,7 @@ def generator(inp):
 		mod.deconvLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
 		mod.deconvLayer(5,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #128
 		mod.deconvLayer(5,3,activation=M.PARAM_TANH) #output
+		print(mod.get_current_layer().get_shape().as_list())
 		reuse_gen = True
 	return mod.get_current_layer()
 

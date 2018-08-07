@@ -4,7 +4,8 @@ import network as N
 import numpy as np 
 
 class AIM():
-	def __init__(self,id_num,age_size):
+	def __init__(self,id_num,age_size,model_path = './aim_model/'):
+		self.model_path = model_path
 		self.inp_holder = tf.placeholder(tf.float32,[None,128,128,3])
 		# self.real_holder = tf.placeholder(tf.float32,[None,128,128,3])
 		self.uni_holder = tf.placeholder(tf.float32,[None,2,2,512])
@@ -48,7 +49,8 @@ class AIM():
 		self.update_ops()
 
 		self.sess = tf.Session()
-		M.loadSess('./aim_model/',self.sess,init=True)
+		M.loadSess(model_path,self.sess,init=True)
+		self.saver = tf.train.Saver()
 
 	def build_loss_mc(self):
 		self.mc_loss = tf.reduce_mean(tf.abs(self.generated - self.target_holder))
@@ -155,6 +157,10 @@ class AIM():
 		self.generated]
 		res = self.sess.run(fetches, feed_dict=feed_dict)
 		return res[:12],res[-1]
+
+	def save(self,modelname):
+		print('Saving model to:',self.model_path+modelname)
+		self.saver.save(self.sess, self.model_path+modelname)
 
 	def eval(self, img, age_lab, normalize=True):
 		if normalize:
