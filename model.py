@@ -1,8 +1,8 @@
 import layers as L 
 import tensorflow as tf
-import copy
 import numpy as np 
 import os 
+import time 
 
 acc = -1
 
@@ -13,6 +13,10 @@ PARAM_TANH = 3
 PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
+
+def set_gpu(config_str):
+	import os
+	os.environ["CUDA_VISIBLE_DEVICES"] = config_str
 
 def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=False):
 #load session if there exist any models, and initialize the sess if not
@@ -88,7 +92,6 @@ def enforcedClassifier(featurelayer,CLASS,BSIZE,lbholder,dropout=1,enforced=Fals
 			lstlayer = evallayer
 	return lstlayer,evallayer
 
-
 def get_feed_dict(keylist,vallist):
 	assert len(keylist)==len(vallist)
 	d = {}
@@ -108,6 +111,35 @@ def get_all_vars(scope=None):
 
 def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
+
+
+# ETA class. I want to see the ETA. It's too boring to wait here.
+class ETA():
+	def __init__(self,max_value):
+		self.start_time = time.time()
+		self.max_value = max_value
+		self.current = 0
+
+	def start(self):
+		self.start_time = time.time()
+		self.current = 0
+
+	def sec2hms(self,sec):
+		hm = sec//60
+		s = sec%60
+		h = hm//60
+		m = hm%60
+		return h,m,s
+
+	def get_ETA(self,current,is_string=True):
+		self.current = current
+		time_div = time.time() - self.start_time
+		time_remain = time_div * float(self.max_value - self.current) / float(self.current + 1)
+		h,m,s = self.sec2hms(int(time_remain))
+		if is_string:
+			return '%d:%d:%d'%(h,m,s)
+		else:
+			return h,m,s
 
 class Model():
 	def __init__(self,inp,size=None):
