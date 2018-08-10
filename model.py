@@ -500,24 +500,31 @@ class Model():
 		return self.result
 
 # experimental, will be wrapped into LSTM model in the future
-def LSTM(inp_holder,state_holder,outdim,name):
-	with tf.variable_scope(name):
-		inp = tf.concat([inp_holder,state_holder],-1)
+def LSTM(inp_holder, hidden_holder, state_holder,outdim,name,reuse=False):
+	with tf.variable_scope(name,reuse=reuse):
+		inp = tf.concat([inp_holder,hidden_holder],-1)
 		inpdim = inp.get_shape().as_list()[-1]
 		
 		# info 
-		I1 = L.Fcnn(inp,inpdim, outdim, name='Info_1',activation=tf.sigmoid)
-		I2 = L.Fcnn(inp,inpdim, outdim, name='Info_2',activation=tf.tanh)
-		I = I1 * I2
-
+		I1 = L.Fcnn(inp,inpdim, outdim, name='Info_1')
+		I2 = L.Fcnn(inp,inpdim, outdim, name='Info_2')
 		# forget
-		F = L.Fcnn(inp,inpdim, outdim, name='Forget',activation=tf.sigmoid)
-
+		F = L.Fcnn(inp,inpdim, outdim, name='Forget')
 		# output
-		H = L.Fcnn(inp,inpdim, outdim, name='Output',activation=tf.sigmoid)
-		C_tanh = tf.tanh(state_holder)
-		H = H * C_tanh
+		O = L.Fcnn(inp,inpdim, outdim, name='Output')
 
-		# next cell state
-		C_next = state_holder * F + I
-		return H,C_next
+		I1_h = L.Fcnn(hidden_holder, outdim, outdim, name='Info_1_hid')
+		I2_h = L.Fcnn(hidden_holder, outdim, outdim, name='Info_2_hid')
+
+		F_h = L.Fcnn(hidden_holder, outdim, outdim, name='Forget_hid')
+		O_h = L.Fcnn(hidden_holder, outdim, outdim, name='Output_hid')
+
+		I = tf.sigmoid(I1 + I1_h) * tf.tanh(I2 + I2_h)
+		F = tf.sigmoid(F + F_h)
+
+		C_next = F * state_holder + I
+		O = tf.sigmoid(O + O_h)
+
+		H = O * tf.tanh(C_next)
+
+	return H,C_next
