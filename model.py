@@ -498,3 +498,26 @@ class Model():
 		self.result = tf.reshape(self.result,[-1,h*w*caps,1,dim,1])
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
+
+# experimental, will be wrapped into LSTM model in the future
+def LSTM(inp_holder,state_holder,outdim,name):
+	with tf.variable_scope(name):
+		inp = tf.concat([inp_holder,state_holder],-1)
+		inpdim = inp.get_shape().as_list()[-1]
+		
+		# info 
+		I1 = L.Fcnn(inp,inpdim, outdim, name='Info_1',activation=tf.sigmoid)
+		I2 = L.Fcnn(inp,inpdim, outdim, name='Info_2',activation=tf.tanh)
+		I = I1 * I2
+
+		# forget
+		F = L.Fcnn(inp,inpdim, outdim, name='Forget',activation=tf.sigmoid)
+
+		# output
+		H = L.Fcnn(inp,inpdim, outdim, name='Output',activation=tf.sigmoid)
+		C_tanh = tf.tanh(state_holder)
+		H = H * C_tanh
+
+		# next cell state
+		C_next = state_holder * F + I
+		return H,C_next
