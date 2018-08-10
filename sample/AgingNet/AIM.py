@@ -4,7 +4,7 @@ import network as N
 import numpy as np 
 
 class AIM():
-	def __init__(self,id_num,age_size,model_path = './aim_model/'):
+	def __init__(self,age_size,id_num,model_path = './aim_model/'):
 		self.model_path = model_path
 		self.inp_holder = tf.placeholder(tf.float32,[None,128,128,3])
 		# self.real_holder = tf.placeholder(tf.float32,[None,128,128,3])
@@ -26,7 +26,7 @@ class AIM():
 		self.A, self.C = N.generator_att(aged_feature)
 
 		# construct synthesized image
-		self.generated = self.A * self.C + (1-self.A) * self.inp_holder
+		self.generated = self.A * self.C + (1.-self.A) * self.inp_holder
 
 		# retrieve tensor for adv2 and ae
 		adv2, age_pred = N.discriminator(self.generated, age_size)
@@ -47,6 +47,7 @@ class AIM():
 		self.build_loss_ai2(ai2,age_size)
 		self.build_loss_A()
 		self.update_ops()
+		self.accuracy = M.accuracy(ip,tf.argmax(self.id_holder,-1))
 
 		self.sess = tf.Session()
 		M.loadSess(model_path,self.sess,init=True)
@@ -54,9 +55,9 @@ class AIM():
 
 	def build_loss_mc(self):
 		self.mc_loss = tf.reduce_mean(tf.abs(self.generated - self.target_holder))
-		train_mc = tf.train.AdamOptimizer(0.0001).minimize(self.mc_loss,\
-			var_list=M.get_all_vars('encoder')+M.get_all_vars('gen_att'))
-		# opt_mc = M.get_update_ops('encoder')+M.get_update_ops('gen_att')
+		train_mc = tf.train.AdamOptimizer(0.001).minimize(self.mc_loss,\
+			#var_list=M.get_all_vars('encoder')+M.get_all_vars('gen_att'))
+			var_list=M.get_all_vars('gen_att'))
 		with tf.control_dependencies([train_mc]):
 			self.train_mc = tf.no_op()
 
@@ -69,9 +70,9 @@ class AIM():
 
 		# opt_adv1 = M.get_update_ops('encoder') + M.get_update_ops('dis_f')
 
-		train_adv1_d = tf.train.AdamOptimizer(0.0001).minimize(self.adv1_loss_d,\
+		train_adv1_d = tf.train.AdamOptimizer(0.00001).minimize(self.adv1_loss_d,\
 			var_list=M.get_all_vars('dis_f'))
-		train_adv1_g = tf.train.AdamOptimizer(0.0001).minimize(self.adv1_loss_g,\
+		train_adv1_g = tf.train.AdamOptimizer(0.00005).minimize(self.adv1_loss_g,\
 			var_list=M.get_all_vars('encoder'))
 
 		with tf.control_dependencies([train_adv1_g,train_adv1_d]):
@@ -112,15 +113,15 @@ class AIM():
 
 	def build_loss_ai1(self,ai1):
 		self.ai1_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=ai1,labels=self.age_holder))
-		self.train_ai1 = tf.train.AdamOptimizer(0.0001).minimize(self.ai1_loss)
+		self.train_ai1 = tf.train.AdamOptimizer(0.000).minimize(self.ai1_loss)
 
 	def build_loss_ai2(self,ai2,age_size):
 		self.ai2_cls_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=ai2,labels=self.age_holder))
 		self.ai2_enc_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=ai2,labels=tf.ones_like(ai2)/age_size))
 
-		train_cls = tf.train.AdamOptimizer(0.0001).minimize(self.ai2_cls_loss,\
+		train_cls = tf.train.AdamOptimizer(0.000).minimize(self.ai2_cls_loss,\
 			var_list=M.get_all_vars('age_cls'))
-		train_enc = tf.train.AdamOptimizer(0.0001).minimize(self.ai2_enc_loss,\
+		train_enc = tf.train.AdamOptimizer(0.000).minimize(self.ai2_enc_loss,\
 			var_list=M.get_all_vars('encoder'))
 
 		with tf.control_dependencies([train_cls,train_enc]):
@@ -129,8 +130,8 @@ class AIM():
 	def build_loss_A(self):
 		tv_loss = tf.reduce_mean(tf.image.total_variation(self.A))
 		l2_reg = tf.reduce_mean(tf.square(self.A))
-		self.loss_A = tv_loss / (128*128) + l2_reg
-		self.train_A = tf.train.AdamOptimizer(0.0001).minimize(self.loss_A,\
+		self.loss_A = tv_loss / (128*128) + l2_reg * 0.01
+		self.train_A = tf.train.AdamOptimizer(0.000001).minimize(self.loss_A,\
 			var_list=M.get_all_vars('gen_att'))
 
 	def update_ops(self):
@@ -151,12 +152,12 @@ class AIM():
 
 		fetches = [self.mc_loss, self.adv1_loss_g, self.adv1_loss_d, self.ip_loss,\
 		self.adv2_loss_g, self.adv2_loss_d, self.age_cls_loss, self.age_generate_loss,\
-		self.ai1_loss, self.ai2_cls_loss, self.ai2_enc_loss, self.loss_A,\
+		self.ai1_loss, self.ai2_cls_loss, self.ai2_enc_loss, self.loss_A,self.accuracy,\
 		self.train_mc, self.train_adv1, self.train_adv2, self.train_ip, self.train_ae,\
 		self.train_ai1, self.train_ai2, self.train_A, self.update_bn,\
 		self.generated]
 		res = self.sess.run(fetches, feed_dict=feed_dict)
-		return res[:12],res[-1]
+		return res[:13],res[-1]
 
 	def save(self,modelname):
 		print('Saving model to:',self.model_path+modelname)
@@ -185,9 +186,9 @@ class AIM():
 	@staticmethod
 	def display_losses(losses):
 		print('MC loss:\t%.4f'%losses[0])
-		print('Adv1_G:\t%.4f\tAdv1_D:\t%.4f'%(losses[1],losses[2]))
-		print('IP loss:\t%.4f'%losses[3])
-		print('Adv2_G:\t%.4f\tAdv2_D:\t%.4f'%(losses[4],losses[5]))
+		print('Adv1_Gen:\t%.4f\tAdv1_Dis:\t%.4f'%(losses[1],losses[2]))
+		print('IP loss:\t%.4f\tAccuracy:\t%.4f'%(losses[3],losses[12]))
+		print('Adv2_Gen:\t%.4f\tAdv2_Dis:\t%.4f'%(losses[4],losses[5]))
 		print('Age_class:\t%.4f\tAge_generate:\t%.4f'%(losses[6],losses[7]))
 		print('Ai1 loss:\t%.4f'%losses[8])
 		print('Ai2_class:\t%.4f\tAi2_encode:\t%.4f'%(losses[9],losses[10]))
