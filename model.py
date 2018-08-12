@@ -499,6 +499,86 @@ class Model():
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
+	def SelfAttention(self,att_num=None,is_fc=False,residual=False):
+		assert is_fc or att_num, 'must state attention feature num for conv'
+		def flatten_hw(layer):
+			shape = layer.get_shape().as_list()
+			layer = tf.reshape(layer,[-1,shape[1]*shape[2],shape[3]])
+			return layer
+
+		with tf.variable_scope('att_'+str(self.layernum)):
+			# conv each of them
+			current = self.result
+			current_shape = current.get_shape().as_list()
+			orig_num = current_shape[-1]
+			if is_fc:
+				f = L.Fcnn(current,orig_num,'att_fc_f'+str(self.layernum))
+				g = L.Fcnn(current,orig_num,'att_fc_g'+str(self.layernum))
+				h = L.Fcnn(current,orig_num,'att_fc_h'+str(self.layernum))
+				f = tf.expand_dims(f,axis=-1)
+				g = tf.expand_dims(g,axis=-1)
+				h = tf.expand_dims(h,axis=-1)
+			else:
+				f = L.conv2D(current,1,att_num,'att_conv_f_'+str(self.layernum))
+				g = L.conv2D(current,1,att_num,'att_conv_g_'+str(self.layernum))
+				h = L.conv2D(current,1,orig_num,'att_conv_h_'+str(self.layernum))
+
+				# flatten them
+				f = flatten_hw(f)
+				g = flatten_hw(g)
+				h = flatten_hw(h)
+
+			# softmax(fg)
+			fg = tf.matmul(f,g,transpose_b=True)
+			fg = tf.nn.softmax(fg,-1)
+
+			# out = scale(softmax(fg)h) + x 
+			scale = tf.Variable(0.)
+			out = tf.matmul(fg,h)
+			if is_fc:
+				out = tf.reshape(out,[-1,orig_num])
+			else:
+				out = tf.reshape(out,[-1]+current_shape[1:3]+[orig_num])
+			if residual:
+				out = out + current
+			self.layernum+=1
+			self.inpsize = out.get_shape().as_list()
+			self.result = out
+		return self.result
+
+	def res_block(self,output,stride=1,ratio=4,activation=PARAM_RELU,batch_norm=True):
+		with tf.variable_scope('block'+str(self.layernum)):
+			inp = self.result.get_shape().as_list()[-1]
+			aa = self.result
+			if inp==output:
+				if stride==1:
+					l0 = self.get_current()
+				else:
+					l0 = self.maxpoolLayer(stride)
+			else:
+				l0 = self.convLayer(1,output,activation=activation,stride=stride)
+			self.set_current_layer(aa)
+			if batch_norm:
+				self.batch_norm()
+			self.activate(activation)
+			self.convLayer(1,output//ratio,activation=activation,batch_norm=batch_norm)
+			self.convLayer(3,output//ratio,activation=activation,batch_norm=batch_norm,stride=stride)
+			self.convLayer(1,output)
+			self.sum(l0)
+		return self.result
+
+	def QAttention(self,feature):
+		with tf.variable_scope('Q_attention_'+str(self.layernum)):
+			self.result = tf.expand_dims(self.result,-1) 
+			e = tf.matmul(feature, self.result) # [bsize, feature_num, 1]
+			e = tf.squeeze(e,[-1])
+			e = tf.nn.softmax(e,-1)
+			out = e * self.result
+			out = tf.reduce_mean(out,1)
+			self.result = out 
+			self.inpsize = self.result.get_shape().as_list()
+		return self.result
+
 # -------------- LSTM related functions & classes ----------------
 # Provide 3 types of LSTM for different usage.
 def LSTM(inp_holder, hidden_holder, state_holder,outdim,name,reuse=False):

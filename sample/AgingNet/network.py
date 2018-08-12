@@ -62,7 +62,6 @@ def block(mod,output,stride):
 		blknum+=1
 	return mod
 
-
 def age_encoder(inp,ind):
 	global reuse_age_enc
 	name = 'decoder'+str(ind)

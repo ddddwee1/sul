@@ -59,7 +59,7 @@ class model_attention(M.Model):
 			self.batch_norm()
 			self.convLayer(1,map_size//ratio,activation=M.PARAM_RELU,batch_norm=True)
 			self.convLayer(3,map_size//ratio,activation=M.PARAM_RELU,batch_norm=True)
-			self.convLayer(1,map_size//ratio,activation=M.PARAM_RELU)
+			self.convLayer(1,map_size,activation=M.PARAM_RELU)
 			# o = tf.reduce_max(tf.stack([current,self.result],axis=0),axis=0)
 			self.result += current
 		return self.result
