@@ -499,7 +499,8 @@ class Model():
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
-# experimental, will be wrapped into LSTM model in the future
+# -------------- LSTM related functions & classes ----------------
+# Provide 3 types of LSTM for different usage.
 def LSTM(inp_holder, hidden_holder, state_holder,outdim,name,reuse=False):
 	with tf.variable_scope(name,reuse=reuse):
 		inp = tf.concat([inp_holder,hidden_holder],-1)
@@ -528,3 +529,53 @@ def LSTM(inp_holder, hidden_holder, state_holder,outdim,name,reuse=False):
 		H = O * tf.tanh(C_next)
 
 	return H,C_next
+
+class BasicLSTM():
+	def __init__(self,dim,name):
+		self.reuse = False
+		self.name = name
+		self.dim = dim
+
+	def apply(self, inp, hidden=None, cell=None):
+		if hidden is None or cell is None:
+			with tf.variable_scope('Initial_zero_state'):
+				bsize = tf.shape(inp)[0]
+				zero_state = tf.constant(0., shape=[1,self.dim])
+				zero_state = tf.tile(zero_state, [bsize, 1])
+		if hidden is None:
+			hidden = zero_state
+		if cell is None:
+			cell = zero_state
+		out = LSTM(inp, hidden, cell, self.dim, self.name, self.reuse)
+		self.reuse = True
+		return out
+
+LSTM_num = 0
+class SimpleLSTM():
+	def __init__(self,dim, out_func=None, init_hidden=None, init_cell=None):
+		global LSTM_num
+		self.name = 'LSTM_%d'%LSTM_num
+		self.lstm = BasicLSTM(dim, self.name)
+		LSTM_num += 1
+		self.out_reuse = False
+		self.out_func = out_func
+		self.hidden = init_hidden
+		self.cell = init_cell
+
+	def apply(self, inp):
+		with tf.variable_scope(self.name):
+			inp_split = tf.unstack(inp, axis=1)
+			lstm_outputs = []
+			for i in range(len(inp_split)):
+				self.hidden, self.cell = self.lstm.apply(inp_split[i], self.hidden, self.cell)
+				lstm_outputs.append(self.hidden)
+			if self.out_func is None:
+				outputs = lstm_outputs
+			else:
+				outputs = []
+				for out in lstm_outputs:
+					o = self.out_func(out, reuse=self.out_reuse)
+					self.out_reuse = True
+					outputs.append(o)
+			out = tf.stack(outputs,1)
+		return out
