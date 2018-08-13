@@ -4,6 +4,7 @@ import model as M
 def conv_layers(inp,reuse=False):
 	with tf.variable_scope('enc',reuse=reuse):
 		mod = M.Model(inp)
+		mod.set_bn_training(False)
 		mod.convLayer(7,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #128
 		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 64
 		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 32
@@ -22,6 +23,7 @@ def conv_layers(inp,reuse=False):
 def deconv_layers(inp,reuse=False):
 	with tf.variable_scope('dec',reuse=reuse):
 		mod = M.Model(inp)
+		mod.set_bn_training(False)
 		mod.reshape([-1,4,4,32])
 		mod.deconvLayer(5,32, stride=2, activation=M.PARAM_LRELU,batch_norm=True) # 8
 		mod.res_block(32,activation=M.PARAM_LRELU)
