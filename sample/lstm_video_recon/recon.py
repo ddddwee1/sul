@@ -4,6 +4,7 @@ import model as M
 import tensorflow as tf 
 import cv2
 
+# M.set_gpu('3')
 class recon():
 	def __init__(self, step):
 		with tf.variable_scope('Input_holders'):
@@ -19,27 +20,27 @@ class recon():
 			features = tf.stack(features,axis=1)
 
 		lstm_out = M.SimpleLSTM(4*4*32).apply(features)
-
 		with tf.variable_scope('Tail'):
 			feat_split = tf.unstack(lstm_out,axis=1)
 			# I try the last frame for now
 			feat = feat_split[-1]
 			A,C = N.deconv_layers(feat)
-
-			self.recon = A * C + (1. - A) * tf.reduce_mean(self.inpholder,axis=1)
+			self.recon = A * C + (1. - A) * self.inpholder[:,-1]
 
 		self.A = A
+		self.C = C
 		self.build_loss()
 
+		self.saver = tf.train.Saver()
 		self.sess = tf.Session()
 		M.loadSess('./model/',self.sess,init=True)
-		self.saver = tf.train.Saver()
 
 	def build_loss(self):
 		with tf.variable_scope('LS_optim'):
+			self.ls1 = tf.reduce_mean(tf.square(self.recon - self.targetholder[:,-1])*self.A)
 			self.ls = tf.reduce_mean(tf.square(self.recon - self.targetholder[:,-1]))
 			self.A_length = tf.reduce_mean(tf.square(self.A))
-			train_step = tf.train.AdamOptimizer(0.0001).minimize(self.ls)
+			train_step = tf.train.AdamOptimizer(0.0001).minimize(self.ls + 0.1 * self.ls1)
 			with tf.control_dependencies(M.get_update_ops()+[train_step]):
 				self.train_step = tf.no_op()
 
@@ -50,8 +51,8 @@ class recon():
 			inp = inp / 127.5 - 1.
 			target = target / 127.5 - 1.
 
-		ls, A_length, _ = self.sess.run([self.ls, self.A_length, self.train_step],feed_dict={self.inpholder:inp, self.targetholder:target})
-		return ls,A_length
+		ls, ls1, A_length, _ = self.sess.run([self.ls, self.ls1, self.A_length, self.train_step],feed_dict={self.inpholder:inp, self.targetholder:target})
+		return ls, ls1,A_length
 
 	def save(self,name):
 		self.saver.save(self.sess,'./model/'+name)
@@ -75,24 +76,25 @@ class recon():
 		res = np.uint8(res)[0]
 		return res
 
-import data_reader
-
-BSIZE = 16
+# import data_reader
+# BSIZE = 32
 STEP = 5
-data_reader = data_reader.data_reader()
+# data_reader = data_reader.data_reader()
 recon_net = recon(STEP)
 
-MAXITER = 100000
-eta = M.ETA(MAXITER)
-for i in range(MAXITER+1):
-	src, tgt = data_reader.get_batch(BSIZE, STEP)
-	ls,A_length = recon_net.train(src, tgt)
-	print('Iter:%4d\tLoss:%.5f\tA_length:%.5f\tETA:%s'%(i,ls,A_length,eta.get_ETA(i)))
-	if i%1000==0 and i>0:
-		recon_net.save('%d.ckpt'%i)
-	if i%10==0:
-		src,_ = data_reader.get_batch(1,STEP)
-		img = recon_net.eval(src)
-		img2 = recon_net.eval_A(src)
-		cv2.imwrite('./res/%d.jpg'%i,img)
-		cv2.imwrite('./res/%d_A.png'%i,img2)
+# MAXITER = 900
+# eta = M.ETA(MAXITER)
+# for i in range(MAXITER+1):
+# 	src, tgt = data_reader.get_batch(BSIZE, STEP)
+# 	ls,ls1,A_length = recon_net.train(src, tgt)
+# 	print('Iter:%4d\tLoss:%.5f\tLs1:%.5f\tA_length:%.5f\tETA:%s'%(i,ls,ls1,A_length,eta.get_ETA(i)))
+# 	if i%1000==0 and i>0:
+# 		recon_net.save('%d.ckpt'%i)
+# 	if i%10==0:
+# 		src,_ = data_reader.get_batch(1,STEP)
+# 		img = recon_net.eval(src)
+# 		img2 = recon_net.eval_A(src)
+# 		for t in range(STEP):
+# 			cv2.imwrite('./res/%d_%d.jpg'%(i,t),src[0][t])
+# 		cv2.imwrite('./res/%d_%d.jpg'%(i,t+1),img)
+# 		cv2.imwrite('./res/%d_A.png'%i,img2)
