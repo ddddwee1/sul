@@ -6,26 +6,22 @@ import numpy as np
 N.bn_training = True
 
 class AIM_gen():
-	def __init__(self,age_size,model_path = './aim_model_gen/'):
+	def __init__(self,model_path = './aim_model_gen/'):
 		self.model_path = model_path
 		self.inp_holder = tf.placeholder(tf.float32,[None,128,128,3])
 		self.age_holder = tf.placeholder(tf.float32,[None,1])
 		self.age_holder2 = tf.placeholder(tf.float32,[None,1])
 
-		# get_feature
-		feat = N.feat_encoder(self.inp_holder)
 		# get attention A and C
-		age_expanded = self.expand(self.age_holder, feat)
-		aged_feature = tf.concat([age_expanded, feat],-1)
+		age_expanded = self.expand(self.age_holder, self.inp_holder)
+		aged_feature = tf.concat([age_expanded, self.inp_holder],-1)
 		A, C = N.generator_att(aged_feature)
 		# construct synthesized image
 		generated = A * C + (1.-A) * self.inp_holder
 
-		# get feature2
-		feat2 = N.feat_encoder(generated)
 		# get attention A2 and C2
-		age_expanded2 = self.expand(self.age_holder2, feat2)
-		aged_feature2 = tf.concat([age_expanded2, feat2],-1)
+		age_expanded2 = self.expand(self.age_holder2, generated)
+		aged_feature2 = tf.concat([age_expanded2, generated],-1)
 		A2, C2 = N.generator_att(aged_feature2)
 		generated2 = A2*C2 + (1.-A2)*generated
 
@@ -34,6 +30,13 @@ class AIM_gen():
 		adv2_real, age_pred_real = N.discriminator(self.inp_holder, age_size)
 
 		adv2_2, age_pred2 = N.discriminator(generated2, age_size)
+
+		feat = N.encoder(self.inp_holder)
+		feat1 = N.encoder(generated)
+		feat2 = N.encoder(generated2) 
+
+		self.feat_loss = tf.reduce_mean(tf.square(feat - feat1) + tf.square(feat - feat2))
+		self.feat_train = tf.train.AdamOptimizer(0.00001).minimize(feat_loss,var_list=M.get_all_vars('gen_att'))
 
 		# get gradient penalty
 
@@ -51,9 +54,7 @@ class AIM_gen():
 		grad_p2 = tf.sqrt(tf.reduce_sum(tf.square(grad_p2),axis=[1,2,3]))
 		grad_p2 = tf.reduce_mean(tf.square(grad_p2 - 1.) * 10.)
 
-
 		# call loss builder functions
-		self.mc_loss, self.train_mc = self.build_loss_mc(generated2, self.inp_holder)
 		self.adv2_loss_d1, self.adv2_loss_g1, self.train_adv2_1 = self.build_loss_adv2(adv2, adv2_real, grad_p1)
 		self.adv2_loss_d2, self.adv2_loss_g2, self.train_adv2_2 = self.build_loss_adv2(adv2_2,adv2_real, grad_p2)
 		self.age_cls_loss_dis, self.train_ae_dis = self.build_loss_ae_dis(age_pred_real, self.age_holder2)
@@ -82,14 +83,14 @@ class AIM_gen():
 		return mc_loss, train_mc
 
 	def build_loss_adv2(self,adv2,adv2_real,grad_penalty):
-		# adv2_loss1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2,labels=tf.zeros_like(adv2)))
-		# adv2_loss2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2_real,labels=tf.ones_like(adv2_real)))
-		# adv2_loss_d = 0.5 * (adv2_loss1 + adv2_loss2)
+		adv2_loss1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2,labels=tf.zeros_like(adv2)))
+		adv2_loss2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2_real,labels=tf.ones_like(adv2_real)))
+		adv2_loss_d = 0.5 * (adv2_loss1 + adv2_loss2)
 
-		# adv2_loss_g = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2,labels=tf.ones_like(adv2)))
+		adv2_loss_g = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=adv2,labels=tf.ones_like(adv2)))
 
-		adv2_loss_g = -tf.reduce_mean(adv2)
-		adv2_loss_d = -tf.reduce_mean(adv2_real) + tf.reduce_mean(adv2)
+		# adv2_loss_g = -tf.reduce_mean(adv2)
+		# adv2_loss_d = -tf.reduce_mean(adv2_real) + tf.reduce_mean(adv2)
 
 		# adv2_loss_d += ddx 
 		print('-----build loss finished, start optimizer')
@@ -98,7 +99,7 @@ class AIM_gen():
 			var_list=M.get_all_vars('gen_att'))
 		print('-----opt _g')
 		with tf.variable_scope('adam_adv2_d',reuse=tf.AUTO_REUSE):
-			train_adv2_d = tf.train.AdamOptimizer(0.00005,beta1=0.5).minimize(adv2_loss_d + grad_penalty,\
+			train_adv2_d = tf.train.AdamOptimizer(0.00005,beta1=0.5).minimize(adv2_loss_d,\
 				var_list=M.get_all_vars('discriminator'))
 		print('-----opt _d')
 
@@ -111,7 +112,7 @@ class AIM_gen():
 		# age_generate_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=age_pred,labels=age_holder))
 		age_generate_loss = tf.reduce_mean(tf.abs(age_pred - age_holder))
 
-		train_ae = tf.train.AdamOptimizer(0.0003,beta1=0.5).minimize(age_generate_loss,\
+		train_ae = tf.train.AdamOptimizer(0.0001,beta1=0.5).minimize(age_generate_loss,\
 			var_list=M.get_all_vars('gen_att'))
 		return age_generate_loss,train_ae
 
@@ -119,7 +120,7 @@ class AIM_gen():
 		# age_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=age_pred,labels=age_holder))
 		age_loss = tf.reduce_mean(tf.abs(age_pred - age_holder))
 
-		train_ae = tf.train.AdamOptimizer(0.0005,beta1=0.5).minimize(age_loss,\
+		train_ae = tf.train.AdamOptimizer(0.0001,beta1=0.5).minimize(age_loss,\
 			var_list=M.get_all_vars('discriminator'))
 		return age_loss,train_ae
 
@@ -146,7 +147,7 @@ class AIM_gen():
 
 		fetches = [self.mc_loss, self.adv2_loss_d1, self.adv2_loss_g1, self.adv2_loss_d2, self.adv2_loss_g2,\
 		self.age_cls_loss_dis, self.age_cls_loss_gen, self.age_cls_loss_gen2, \
-		self.accuracy, self.A1_l, self.A2_l,\
+		self.feat_loss, self.A1_l, self.A2_l,\
 		self.train_adv2_1, self.train_adv2_2, self.train_ae_dis, self.train_ae_gen, self.train_ae_gen2,\
 		self.update_bn,self.train_A, self.train_A2]
 		res = self.sess.run(fetches, feed_dict=feed_dict)
@@ -185,7 +186,7 @@ class AIM_gen():
 		print('MC loss:\t%.4f'%losses[0])
 		print('Adv_dis1:\t%.4f\tAdv_gen1:\t%.4f'%(losses[1],losses[2]))
 		print('Adv_dis2:\t%.4f\tAdv_gen2:\t%.4f'%(losses[3],losses[4]))
-		print('Age_dis:\t%.4f\tAge_acc:\t%.4f'%(losses[5],losses[8]))
+		print('Age_dis:\t%.4f\tFeat_loss:\t%.4f'%(losses[5],losses[8]))
 		print('Age_gen1:\t%.4f\tAge_gen2:\t%.4f'%(losses[6],losses[7]))
 		print('A1_length:\t%.4f\tA2_length:\t%.4f'%(losses[9],losses[10]))
 
@@ -202,3 +203,6 @@ class AIM_gen():
 		src = tf.expand_dims(src,1)
 		src = tf.tile(src,[1,target_shape[1],target_shape[2],1])
 		return src
+
+if __name__=='__main__':
+	aim_mod = AIM_gen(7)

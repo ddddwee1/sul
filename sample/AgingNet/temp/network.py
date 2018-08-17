@@ -63,7 +63,6 @@ def block(mod,output,stride):
 		blknum+=1
 	return mod
 
-
 def age_encoder(inp,ind):
 	global reuse_age_enc
 	name = 'decoder'+str(ind)
@@ -94,7 +93,7 @@ def generator(inp):
 		reuse_gen = True
 	return mod.get_current_layer()
 
-def discriminator(inp,age_size):
+def discriminator(inp):
 	global reuse_dis,bn_training,blknum
 	blknum = 0
 	with tf.variable_scope('discriminator',reuse=reuse_dis):
@@ -109,10 +108,12 @@ def discriminator(inp,age_size):
 		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
 		adv = mod.convLayer(3,1)
 		mod.set_current_layer(feat)
-		block(mod,128,2) # 8
-		block(mod,256,2) # 4
-		block(mod,256,2) # 2
-		block(mod,256,1)
+		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
+		block(mod,128,1) # 8
+		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
+		block(mod,256,1) # 4
+		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True)
+		block(mod,256,1) # 2
 		mod.flatten()
 		age = mod.fcLayer(1)
 		reuse_dis = True
@@ -165,14 +166,22 @@ def generator_att(inp):
 	with tf.variable_scope('gen_att',reuse=reuse_genatt):
 		mod = Model(inp)
 		mod.set_bn_training(bn_training)
-		mod.deconvLayer(3,512,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #4
-		mod.deconvLayer(3,256,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #8
-		mod.deconvLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #16
-		mod.SelfAttention(32)
-		mod.deconvLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #32
-		mod.deconvLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
-		feat = mod.deconvLayer(5,16,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #128
-		A = mod.convLayer(5,3,activation=M.PARAM_SIGMOID) #output_attention
+		mod.convLayer(5,32,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #64
+		block(mod,64,1)
+		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #32
+		block(mod,128,1)
+		block(mod,256,1)
+		block(mod,256,1)
+		block(mod,512,1)
+		mod.SelfAttention(64)
+		block(mod,512,1)
+		block(mod,256,1)
+		block(mod,256,1)
+		block(mod,128,1)
+		mod.deconvLayer(3,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 64
+		block(mod,64,1)
+		feat = mod.deconvLayer(5,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #128
+		A = mod.convLayer(5,1,activation=M.PARAM_SIGMOID) #output_attention
 		mod.set_current_layer(feat)
 		C = mod.convLayer(5,3,activation=M.PARAM_TANH)
 		reuse_genatt = True
