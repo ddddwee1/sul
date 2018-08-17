@@ -533,7 +533,7 @@ class Model():
 			fg = tf.nn.softmax(fg,-1)
 
 			# out = scale(softmax(fg)h) + x 
-			scale = tf.Variable(0.)
+			scale = tf.get_variable('Variable',shape=[],initializer=tf.constant_initializer(0.0))
 			out = tf.matmul(fg,h)
 			if is_fc:
 				out = tf.reshape(out,[-1,orig_num])
