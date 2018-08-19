@@ -162,7 +162,8 @@ def discriminator_f(inp,id_num):
 	return adv,ip
 
 def generator_att(inp):
-	global reuse_genatt,bn_training
+	global reuse_genatt,bn_training,blknum
+	blknum=0
 	with tf.variable_scope('gen_att',reuse=reuse_genatt):
 		mod = Model(inp)
 		mod.set_bn_training(bn_training)
@@ -170,13 +171,13 @@ def generator_att(inp):
 		block(mod,64,1)
 		mod.convLayer(3,128,stride=2,activation=M.PARAM_LRELU,batch_norm=True) #32
 		block(mod,128,1)
+		# block(mod,256,1)
+		# block(mod,256,1)
 		block(mod,256,1)
+		mod.SelfAttention(64,residual=True)
+		# block(mod,512,1)
 		block(mod,256,1)
-		block(mod,512,1)
-		mod.SelfAttention(64)
-		block(mod,512,1)
-		block(mod,256,1)
-		block(mod,256,1)
+		# block(mod,256,1)
 		block(mod,128,1)
 		mod.deconvLayer(3,64,stride=2,activation=M.PARAM_LRELU,batch_norm=True) # 64
 		block(mod,64,1)
@@ -211,5 +212,3 @@ def age_classify_r(inp,age_size):
 		mod.fcLayer(age_size)
 		reuse_agecls = True
 	return mod.get_current_layer()
-
-def enc_gen():

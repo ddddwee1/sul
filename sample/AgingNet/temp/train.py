@@ -6,7 +6,7 @@ import cv2
 
 M.set_gpu('3')
 
-aim_mod = AIM_gen.AIM_gen(7)
+aim_mod = AIM_gen.AIM_gen()
 
 # get data_reader
 import data_reader

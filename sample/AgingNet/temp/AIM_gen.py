@@ -26,35 +26,38 @@ class AIM_gen():
 		generated2 = A2*C2 + (1.-A2)*generated
 
 		# retrieve tensor for adv2 and ae
-		adv2, age_pred = N.discriminator(generated, age_size)
-		adv2_real, age_pred_real = N.discriminator(self.inp_holder, age_size)
+		adv2, age_pred = N.discriminator(generated)
+		adv2_real, age_pred_real = N.discriminator(self.inp_holder)
 
-		adv2_2, age_pred2 = N.discriminator(generated2, age_size)
+		adv2_2, age_pred2 = N.discriminator(generated2)
 
-		feat = N.encoder(self.inp_holder)
-		feat1 = N.encoder(generated)
-		feat2 = N.encoder(generated2) 
+		feat = N.feat_encoder(self.inp_holder)
+		feat1 = N.feat_encoder(generated)
+		feat2 = N.feat_encoder(generated2) 
 
 		self.feat_loss = tf.reduce_mean(tf.square(feat - feat1) + tf.square(feat - feat2))
-		self.feat_train = tf.train.AdamOptimizer(0.00001).minimize(feat_loss,var_list=M.get_all_vars('gen_att'))
+		self.train_feat = tf.train.AdamOptimizer(0.00001).minimize(self.feat_loss,var_list=M.get_all_vars('gen_att'))
 
 		# get gradient penalty
 
-		gamma1 = tf.random_uniform([],0.0,1.0)
-		interp1 = gamma1 * generated + (1. - gamma1) * self.inp_holder
-		interp1_y, _ = N.discriminator(interp1, 7)
-		grad_p1 = tf.gradients(interp1_y, interp1)[0]
-		grad_p1 = tf.sqrt(tf.reduce_sum(tf.square(grad_p1),axis=[1,2,3]))
-		grad_p1 = tf.reduce_mean(tf.square(grad_p1 - 1.) * 10.)
+		# gamma1 = tf.random_uniform([],0.0,1.0)
+		# interp1 = gamma1 * generated + (1. - gamma1) * self.inp_holder
+		# interp1_y, _ = N.discriminator(interp1, 7)
+		# grad_p1 = tf.gradients(interp1_y, interp1)[0]
+		# grad_p1 = tf.sqrt(tf.reduce_sum(tf.square(grad_p1),axis=[1,2,3]))
+		# grad_p1 = tf.reduce_mean(tf.square(grad_p1 - 1.) * 10.)
 
-		gamma2 = tf.random_uniform([],0.0,1.0)
-		interp2 = gamma2 * generated + (1. - gamma2) * self.inp_holder
-		interp2_y, _ = N.discriminator(interp2, 7)
-		grad_p2 = tf.gradients(interp2_y, interp2)[0]
-		grad_p2 = tf.sqrt(tf.reduce_sum(tf.square(grad_p2),axis=[1,2,3]))
-		grad_p2 = tf.reduce_mean(tf.square(grad_p2 - 1.) * 10.)
+		# gamma2 = tf.random_uniform([],0.0,1.0)
+		# interp2 = gamma2 * generated + (1. - gamma2) * self.inp_holder
+		# interp2_y, _ = N.discriminator(interp2, 7)
+		# grad_p2 = tf.gradients(interp2_y, interp2)[0]
+		# grad_p2 = tf.sqrt(tf.reduce_sum(tf.square(grad_p2),axis=[1,2,3]))
+		# grad_p2 = tf.reduce_mean(tf.square(grad_p2 - 1.) * 10.)
+
+		grad_p1 = grad_p2 = 0.
 
 		# call loss builder functions
+		self.mc_loss, self.train_mc = self.build_loss_mc(generated2, self.inp_holder)
 		self.adv2_loss_d1, self.adv2_loss_g1, self.train_adv2_1 = self.build_loss_adv2(adv2, adv2_real, grad_p1)
 		self.adv2_loss_d2, self.adv2_loss_g2, self.train_adv2_2 = self.build_loss_adv2(adv2_2,adv2_real, grad_p2)
 		self.age_cls_loss_dis, self.train_ae_dis = self.build_loss_ae_dis(age_pred_real, self.age_holder2)
@@ -149,7 +152,7 @@ class AIM_gen():
 		self.age_cls_loss_dis, self.age_cls_loss_gen, self.age_cls_loss_gen2, \
 		self.feat_loss, self.A1_l, self.A2_l,\
 		self.train_adv2_1, self.train_adv2_2, self.train_ae_dis, self.train_ae_gen, self.train_ae_gen2,\
-		self.update_bn,self.train_A, self.train_A2]
+		self.update_bn,self.train_A, self.train_A2, self.train_feat]
 		res = self.sess.run(fetches, feed_dict=feed_dict)
 		return res[:11]
 
