@@ -9,7 +9,7 @@ l_num = 0
 def weight(shape,dtype=None):
 	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
 
-def bias(shape,value=0.1,dtype=None):
+def bias(shape,value=0.0,dtype=None):
 	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
 
 ###########################################################
@@ -37,7 +37,7 @@ def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=
 			dilation_rate=dilation_rate,\
 			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
 			use_bias=usebias,\
-			bias_initializer=tf.constant_initializer(0.1),name=name)
+			bias_initializer=tf.constant_initializer(0.0),name=name)
 	return z
 
 def sum(x,y):
