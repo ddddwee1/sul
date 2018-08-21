@@ -65,7 +65,7 @@ def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L
 		inp_shape = featurelayer.get_shape().as_list()
 		inputdim = inp_shape[1]
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
-		CLASS = lbholder.get_shape().as_list()
+		CLASS = lbholder.get_shape().as_list()[-1]
 		w = L.weight([inputdim,CLASS])
 		nfl = tf.nn.l2_normalize(featurelayer,1)
 		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
