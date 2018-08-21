@@ -86,6 +86,8 @@ def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L
 			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
 			lstlayer = nb*lstlayer
 			lstlayer = nf*lstlayer
+		else:
+			lstlayer = tf.scalar_mul(L2const, lstlayer)
 	return lstlayer,evallayer
 
 def get_feed_dict(keylist,vallist):
