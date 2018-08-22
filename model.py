@@ -60,14 +60,12 @@ def accuracy(inp,lab):
 	acc +=1
 	return L.accuracy(inp,lab,'accuracy_'+str(acc))
 
-def enforcedClassifier(featurelayer,CLASS,BSIZE,lbholder,dropout=1,enforced=False,L2norm=False,L2const=10.0):
-	with tf.variable_scope('Enforced_Softmax1'):
-		if enforced:
-			print('Enforced softmax loss is enabled.')
+def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L2const=10.0):
 	with tf.variable_scope('Enforced_Softmax'):
 		inp_shape = featurelayer.get_shape().as_list()
 		inputdim = inp_shape[1]
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
+		CLASS = lbholder.get_shape().as_list()[-1]
 		w = L.weight([inputdim,CLASS])
 		nfl = tf.nn.l2_normalize(featurelayer,1)
 		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
@@ -75,21 +73,21 @@ def enforcedClassifier(featurelayer,CLASS,BSIZE,lbholder,dropout=1,enforced=Fals
 			evallayer = tf.scalar_mul(L2const,buff)
 		else:
 			evallayer = tf.matmul(featurelayer,w)
-		if enforced:
-			floatlb = tf.cast(lbholder,tf.float32)
-			lbc = tf.ones([BSIZE,CLASS],dtype=tf.float32) - floatlb
-			filteredmtx = tf.multiply(lbc,buff)
-			#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
-			cosmtx = tf.multiply(floatlb,buff)
-			cosmtx2 = (tf.minimum(cosmtx*0.9,cosmtx*1.1))*floatlb
-			lstlayer = cosmtx2+filteredmtx
-			if not L2norm:
-				nb = tf.norm(w,axis=0,keep_dims=True)
-				nf = tf.norm(featurelayer,axis=1,keep_dims=True)
-				lstlayer = nb*lstlayer
-				lstlayer = nf*lstlayer
+		floatlb = tf.cast(lbholder,tf.float32)
+		lbc = tf.ones_like(lbholder) - floatlb
+		filteredmtx = tf.multiply(lbc,buff)
+		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
+		cosmtx = tf.multiply(floatlb,buff)
+		if multi is not None:
+			cosmtx2 = (tf.minimum(cosmtx*multi[0],cosmtx*multi[1]))*floatlb
+		lstlayer = cosmtx2+filteredmtx
+		if not L2norm:
+			nb = tf.norm(w,axis=0,keep_dims=True)
+			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
+			lstlayer = nb*lstlayer
+			lstlayer = nf*lstlayer
 		else:
-			lstlayer = evallayer
+			lstlayer = tf.scalar_mul(L2const, lstlayer)
 	return lstlayer,evallayer
 
 def get_feed_dict(keylist,vallist):
