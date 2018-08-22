@@ -4,7 +4,7 @@ import model as M
 import tensorflow as tf 
 import cv2
 
-# M.set_gpu('3')
+M.set_gpu('2')
 class recon():
 	def __init__(self, step):
 		with tf.variable_scope('Input_holders'):
@@ -19,7 +19,7 @@ class recon():
 				features.append(N.conv_layers(inp_split[i],i!=0))
 			features = tf.stack(features,axis=1)
 
-		lstm_out = M.SimpleLSTM(4*4*32).apply(features)
+		lstm_out = M.SimpleLSTM(4*4*128).apply(features)
 		with tf.variable_scope('Tail'):
 			feat_split = tf.unstack(lstm_out,axis=1)
 			# I try the last frame for now
@@ -76,25 +76,25 @@ class recon():
 		res = np.uint8(res)[0]
 		return res
 
-# import data_reader
-# BSIZE = 32
+import data_reader
+BSIZE = 32
 STEP = 5
-# data_reader = data_reader.data_reader()
+data_reader = data_reader.data_reader()
 recon_net = recon(STEP)
 
-# MAXITER = 900
-# eta = M.ETA(MAXITER)
-# for i in range(MAXITER+1):
-# 	src, tgt = data_reader.get_batch(BSIZE, STEP)
-# 	ls,ls1,A_length = recon_net.train(src, tgt)
-# 	print('Iter:%4d\tLoss:%.5f\tLs1:%.5f\tA_length:%.5f\tETA:%s'%(i,ls,ls1,A_length,eta.get_ETA(i)))
-# 	if i%1000==0 and i>0:
-# 		recon_net.save('%d.ckpt'%i)
-# 	if i%10==0:
-# 		src,_ = data_reader.get_batch(1,STEP)
-# 		img = recon_net.eval(src)
-# 		img2 = recon_net.eval_A(src)
-# 		for t in range(STEP):
-# 			cv2.imwrite('./res/%d_%d.jpg'%(i,t),src[0][t])
-# 		cv2.imwrite('./res/%d_%d.jpg'%(i,t+1),img)
-# 		cv2.imwrite('./res/%d_A.png'%i,img2)
+MAXITER = 50000
+eta = M.ETA(MAXITER)
+for i in range(MAXITER+1):
+	src, tgt = data_reader.get_batch(BSIZE, STEP)
+	ls,ls1,A_length = recon_net.train(src, tgt)
+	print('Iter:%4d\tLoss:%.5f\tLs1:%.5f\tA_length:%.5f\tETA:%s'%(i,ls,ls1,A_length,eta.get_ETA(i)))
+	if i%1000==0 and i>0:
+		recon_net.save('%d.ckpt'%i)
+	if i%10==0:
+		src,_ = data_reader.get_batch(1,STEP)
+		img = recon_net.eval(src)
+		img2 = recon_net.eval_A(src)
+		for t in range(STEP):
+			cv2.imwrite('./res/%d_%d.jpg'%(i,t),src[0][t])
+		cv2.imwrite('./res/%d_%d.jpg'%(i,t+1),img)
+		cv2.imwrite('./res/%d_A.png'%i,img2)
