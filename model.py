@@ -79,8 +79,8 @@ def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L
 		#filteredmtx = tf.maximum(filteredmtx*1.2,filteredmtx*0.8)
 		cosmtx = tf.multiply(floatlb,buff)
 		if multi is not None:
-			cosmtx2 = (tf.minimum(cosmtx*multi[0],cosmtx*multi[1]))*floatlb
-		lstlayer = cosmtx2+filteredmtx
+			cosmtx = (tf.minimum(cosmtx*multi[0],cosmtx*multi[1]))*floatlb
+		lstlayer = cosmtx+filteredmtx
 		if not L2norm:
 			nb = tf.norm(w,axis=0,keep_dims=True)
 			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
