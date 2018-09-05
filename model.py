@@ -67,11 +67,12 @@ def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L
 		featurelayer = tf.nn.dropout(featurelayer,dropout)
 		CLASS = lbholder.get_shape().as_list()[-1]
 		w = L.weight([inputdim,CLASS])
-		nfl = tf.nn.l2_normalize(featurelayer,1)
-		buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
 		if L2norm:
+			nfl = tf.nn.l2_normalize(featurelayer,1)
+			buff = tf.matmul(nfl,tf.nn.l2_normalize(w,0))
 			evallayer = tf.scalar_mul(L2const,buff)
 		else:
+			buff = tf.matmul(featurelayer,w)
 			evallayer = tf.matmul(featurelayer,w)
 		floatlb = tf.cast(lbholder,tf.float32)
 		lbc = tf.ones_like(lbholder) - floatlb
@@ -81,12 +82,7 @@ def enforcedClassifier(featurelayer,lbholder,dropout=1,multi=None,L2norm=False,L
 		if multi is not None:
 			cosmtx = (tf.minimum(cosmtx*multi[0],cosmtx*multi[1]))*floatlb
 		lstlayer = cosmtx+filteredmtx
-		if not L2norm:
-			nb = tf.norm(w,axis=0,keep_dims=True)
-			nf = tf.norm(featurelayer,axis=1,keep_dims=True)
-			lstlayer = nb*lstlayer
-			lstlayer = nf*lstlayer
-		else:
+		if L2norm:
 			lstlayer = tf.scalar_mul(L2const, lstlayer)
 	return lstlayer,evallayer
 
