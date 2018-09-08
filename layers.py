@@ -9,36 +9,98 @@ l_num = 0
 def weight(shape,dtype=None):
 	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
 
+def weight_conv(shape,dtype=None):
+	return tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
+
 def bias(shape,value=0.0,dtype=None):
 	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
 
 ###########################################################
 #define basic layers
 
-def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
+# def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
+# 	global l_num
+# 	print('Conv_bias:',usebias)
+# 	if name is None:
+# 		name = 'conv_l_'+str(l_num)
+# 		l_num+=1
+# 	# with tf.variable_scope(name):
+# 	if isinstance(size,list):
+# 		kernel = size
+# 	else:
+# 		kernel = [size,size]
+# 	if (not kernel_data is None) and (not bias_data is None):
+# 		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+# 			dilation_rate=dilation_rate,\
+# 			kernel_initializer=tf.constant_initializer(kernel_data),\
+# 			use_bias=usebias,\
+# 			bias_initializer=tf.constant_initializer(bias_data),name=name)
+# 	else:
+# 		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
+# 			dilation_rate=dilation_rate,\
+# 			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
+# 			use_bias=usebias,\
+# 			bias_initializer=tf.constant_initializer(0.0),name=name)
+# 	return z
+
+def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
 	global l_num
-	print('Conv_bias:',usebias)
+	print('Weight norm Conv. Bias:',usebias)
+	inchannel = x.get_shape().as_list()[-1]
+	# set name
 	if name is None:
 		name = 'conv_l_'+str(l_num)
 		l_num+=1
-	# with tf.variable_scope(name):
+	# set size
 	if isinstance(size,list):
-		kernel = size
+		size = [size[0],size[1],inchannel,outchn]
 	else:
-		kernel = [size,size]
-	if (not kernel_data is None) and (not bias_data is None):
-		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
-			dilation_rate=dilation_rate,\
-			kernel_initializer=tf.constant_initializer(kernel_data),\
-			use_bias=usebias,\
-			bias_initializer=tf.constant_initializer(bias_data),name=name)
+		size = [size, size, inchannel, outchn]
+	# set stride
+	if isinstance(stride,list):
+		stride = [1,stride[0],stride[1],1]
 	else:
-		z = tf.layers.conv2d(x, outchn, kernel, strides=(stride, stride), padding=pad,\
-			dilation_rate=dilation_rate,\
-			kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),\
-			use_bias=usebias,\
-			bias_initializer=tf.constant_initializer(0.0),name=name)
-	return z
+		stride = [1,stride, stride, 1]
+	# set dilation
+	if isinstance(dilation_rate,list):
+		dilation_rate = [1,dilation_rate[0],dilation_rate[1],1]
+	else:
+		dilation_rate = [1,dilation_rate,dilation_rate,1]
+
+	with tf.variable_scope(name):
+		if kernel_data:
+			w = tf.constant(kernel_data,name='kernel')
+		else:
+			w = weight_conv(size)
+			tf.add_to_collection('decay_variables',w)
+
+		
+		if weight_norm:
+			print('Enable weight norm')
+			w = w.initialized_value()
+			w = tf.nn.l2_normalize(w, [0,1,2])
+			try:
+				s = tf.get_variable('weight_scale')
+			except:
+				print('Initialize weight norm')
+				x_init = tf.nn.conv2d(x,w,stride,pad,dilations=dilation_rate)
+				m_init, v_init = tf.nn.moments(x_init,[0,1,2])
+				s_init = 1. / tf.sqrt(v_init + 1e-8)
+				s = tf.get_variable('weight_scale',dtype=tf.float32,initializer=s_init)
+				s = s.initialized_value()
+			w = tf.reshape(s,[1,1,1,outchn]) *w
+		
+		out = tf.nn.conv2d(x,w,stride,pad,dilations=dilation_rate)
+
+		if usebias:
+			if bias_data:
+				b = tf.constant(bias_data,name='bias')
+			else:
+				b = bias([outchn])
+				tf.add_to_collection('decay_variables',b)
+			out = tf.nn.bias_add(out,b)
+	return out 
+
 
 def sum(x,y):
 	return x+y
@@ -54,7 +116,7 @@ def deconv2D(x,size,outchn,name,stride=1,pad='SAME'):
 			bias_initializer=tf.constant_initializer(0.1))
 		return z
 
-def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtype=None,usebias=True):
+def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',kernel_data=None,dtype=None,usebias=True):
 	if dtype is None:
 		dtype = x.dtype
 	with tf.variable_scope(name):
@@ -62,13 +124,16 @@ def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',weight_data=None,dtyp
 			kernel = [size[0],size[1],inshape,multi]
 		else:
 			kernel = [size,size,inshape,multi]
-		if weight_data==None:
+		if kernel_data==None:
 			w = weight(kernel,dtype=dtype)
+			tf.add_to_collection('decay_variables',w)
 		else:
-			w = weight_data
+			w = kernel_data
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
+		
 		if usebias:
 			b = bias([1,1,1,inshape*multi])
+			tf.add_to_collection('decay_variables',b)
 			res += b
 	return res
 
@@ -99,6 +164,7 @@ def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 		if nobias:
 			print('No biased fully connected layer is used!')
 			W = weight([insize,outsize],dtype=dtype)
+			tf.add_to_collection('decay_variables',W)
 			tf.summary.histogram(name+'/weight',W)
 			if activation==None:
 				return tf.matmul(x,W)
@@ -106,6 +172,8 @@ def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 		else:
 			W = weight([insize,outsize],dtype=dtype)
 			b = bias([outsize],dtype=dtype)
+			tf.add_to_collection('decay_variables',W)
+			tf.add_to_collection('decay_variables',b)
 			tf.summary.histogram(name+'/weight',W)
 			tf.summary.histogram(name+'/bias',b)
 			if activation==None:

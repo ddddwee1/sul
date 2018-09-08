@@ -18,7 +18,7 @@ def set_gpu(config_str):
 	import os
 	os.environ["CUDA_VISIBLE_DEVICES"] = config_str
 
-def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=False):
+def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=False, init_dict=None):
 #load session if there exist any models, and initialize the sess if not
 	assert modpath==None or mods==None
 	assert (not modelpath==None) or (not modpath==None) or (not modpath==None)
@@ -27,7 +27,8 @@ def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=
 	if init:
 		if not os.path.exists(modelpath):
 			os.mkdir(modelpath)
-		sess.run(tf.global_variables_initializer())
+		print('Initializing...')
+		sess.run(tf.global_variables_initializer(),feed_dict=init_dict)
 	if var_list==None:
 		saver = tf.train.Saver()
 	else:
@@ -48,12 +49,11 @@ def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=
 			print('loading from model:',mod)
 			saver.restore(sess,mod)
 		else:
-			sess.run(tf.global_variables_initializer())
 			print('No checkpoint in folder, use initial graph...')
 	return sess
 
-def initialize(sess):
-	sess.run(tf.global_variables_initializer())
+def initialize(sess, init_dict=None):
+	sess.run(tf.global_variables_initializer(), feed_dict=init_dict)
 
 def accuracy(inp,lab):
 	global acc
@@ -106,6 +106,13 @@ def get_all_vars(scope=None):
 def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
+def get_var_decay(rate,scope=None):
+	with tf.variable_scope('weight decay'):
+		w = tf.get_collection('decay_variables',scope=scope)
+		decay_ops = [tf.assign_sub( v , (1.-rate)*v) for v in w]
+		with tf.control_dependencies(decay_ops):
+			decay_op = tf.no_op()
+	return decay_op
 
 # ETA class. I want to see the ETA. It's too boring to wait here.
 class ETA():
@@ -191,7 +198,7 @@ class Model():
 		self.result = res
 		return self.result
 
-	def convLayer(self,size,outchn,dilation_rate=1,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None):
+	def convLayer(self,size,outchn,dilation_rate=1,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
 		with tf.variable_scope('conv_'+str(self.layernum)):
 			if isinstance(size,list):
 				kernel = size
@@ -200,7 +207,7 @@ class Model():
 			if layerin!=None:
 				self.result = layerin
 				self.inpsize = layerin.get_shape().as_list()
-			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate)
+			self.result = L.conv2D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 			self.layernum += 1
