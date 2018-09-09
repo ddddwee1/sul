@@ -107,7 +107,7 @@ def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
 def get_var_decay(rate,scope=None):
-	with tf.variable_scope('weight decay'):
+	with tf.variable_scope('weight_decay'):
 		w = tf.get_collection('decay_variables',scope=scope)
 		decay_ops = [tf.assign_sub( v , (1.-rate)*v) for v in w]
 		with tf.control_dependencies(decay_ops):
@@ -547,8 +547,37 @@ class Model():
 			self.result = out
 		return self.result
 
-	def res_block(self,output,stride=1,ratio=4,activation=PARAM_RELU,batch_norm=True):
+	def res_block(self,output,stride=1,ratio=4,activation=PARAM_RELU,batch_norm=True, input_batch_norm=True):
 		with tf.variable_scope('block'+str(self.layernum)):
+			inp = self.result.get_shape().as_list()[-1]
+			aa = self.result
+			if inp==output:
+				if stride==1:
+					l0 = self.get_current()
+				else:
+					l0 = self.maxpoolLayer(stride)
+			else:
+				l0 = self.convLayer(1,output,activation=activation,stride=stride)
+			self.set_current_layer(aa)
+			if batch_norm and input_batch_norm:
+				self.batch_norm()
+			self.activate(activation)
+			self.convLayer(1,output//ratio,activation=activation,batch_norm=batch_norm)
+			self.convLayer(3,output//ratio,activation=activation,batch_norm=batch_norm,stride=stride)
+			self.convLayer(1,output)
+			self.sum(l0)
+		return self.result
+
+	def shake_layer(self,a,b):
+		with tf.variable_scope('shake_layer'+str(self.layernum)):
+			self.result = L.shake_layer(self.result,a,b)
+			self.layernum += 1
+		return self.result 
+
+	def shake_block(self,output,stride=1,ratio=8,activation=PARAM_RELU,batch_norm=True):
+		with tf.variable_scope('shake_block'+str(self.layernum)):
+			a = tf.random_uniform([],minval=0.,maxval=1.)
+			b = tf.random_uniform([],minval=0.,maxval=1.)
 			inp = self.result.get_shape().as_list()[-1]
 			aa = self.result
 			if inp==output:
@@ -561,10 +590,19 @@ class Model():
 			self.set_current_layer(aa)
 			if batch_norm:
 				self.batch_norm()
-			self.activate(activation)
+			bb = self.activate(activation)
 			self.convLayer(1,output//ratio,activation=activation,batch_norm=batch_norm)
 			self.convLayer(3,output//ratio,activation=activation,batch_norm=batch_norm,stride=stride)
 			self.convLayer(1,output)
+			branch1 = self.shake_layer(a, b)
+
+			self.set_current_layer(bb)
+			self.convLayer(1,output//ratio,activation=activation,batch_norm=batch_norm)
+			self.convLayer(3,output//ratio,activation=activation,batch_norm=batch_norm,stride=stride)
+			self.convLayer(1,output)
+			branch2 = self.shake_layer(1.-a, 1.-b)
+
+			self.sum(branch1)
 			self.sum(l0)
 		return self.result
 
@@ -579,6 +617,8 @@ class Model():
 			self.result = out 
 			self.inpsize = self.result.get_shape().as_list()
 		return self.result
+
+	
 
 # -------------- LSTM related functions & classes ----------------
 # Provide 3 types of LSTM for different usage.
