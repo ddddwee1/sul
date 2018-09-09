@@ -574,10 +574,13 @@ class Model():
 			self.layernum += 1
 		return self.result 
 
-	def shake_block(self,output,stride=1,ratio=8,activation=PARAM_RELU,batch_norm=True):
+	def shake_block(self,output,stride=1,ratio=4,activation=PARAM_RELU,batch_norm=True, group=2, is_training=True):
 		with tf.variable_scope('shake_block'+str(self.layernum)):
-			a = tf.random_uniform([],minval=0.,maxval=1.)
-			b = tf.random_uniform([],minval=0.,maxval=1.)
+			if is_training:
+				a = tf.random_uniform([],minval=0.,maxval=1.)
+				b = tf.random_uniform([],minval=0.,maxval=1.)
+			else:
+				a = b = 1/float(group)
 			inp = self.result.get_shape().as_list()[-1]
 			aa = self.result
 			if inp==output:

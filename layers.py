@@ -243,8 +243,5 @@ def upSampling(inp,multiplier,name):
 		w2 = w*multiplier
 	return resize_nn(inp,[h2,w2],name)
 
-@tf.custom_gradient
-def shake_layer(self,x, a, b):
-	def grad(dy):
-		return b*dy
-	return a*x, grad
+def shake_layer(x,a,b):
+	return b*x + tf.stop_gradient(a*x - b*x)
