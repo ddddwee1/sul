@@ -45,7 +45,7 @@ def bias(shape,value=0.0,dtype=None):
 
 def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
 	global l_num
-	print('Weight norm Conv. Bias:',usebias)
+	print('Conv Bias:',usebias,'Weight norm:',weight_norm)
 	inchannel = x.get_shape().as_list()[-1]
 	# set name
 	if name is None:
@@ -243,5 +243,12 @@ def upSampling(inp,multiplier,name):
 		w2 = w*multiplier
 	return resize_nn(inp,[h2,w2],name)
 
+# def shake_layer(x,a,b):
+# 	return b*x + tf.stop_gradient(a*x - b*x)
+
+@tf.custom_gradient
 def shake_layer(x,a,b):
-	return b*x + tf.stop_gradient(a*x - b*x)
+	y = tf.scalar_mul(a,x)
+	def grad_fn(grad):
+		return [tf.scalar_mul(b,grad),None,None]
+	return y,grad_fn
