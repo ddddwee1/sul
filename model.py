@@ -272,7 +272,6 @@ class Model():
 
 	def fcLayer(self,outsize,activation=-1,nobias=False,batch_norm=False):
 		with tf.variable_scope('fc_'+str(self.layernum)):
-			self.inpsize = [i for i in self.inpsize]
 			self.result = L.Fcnn(self.result,self.inpsize[1],outsize,'fc_'+str(self.layernum),nobias=nobias)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)

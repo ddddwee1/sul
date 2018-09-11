@@ -9,7 +9,7 @@ var_list = []
 #define weight and bias initialization
 
 def weight(shape,record=True,dtype=None):
-	context = tf.contrib.framework.get_name_scope()
+	context = tf.get_variable_scope().name
 	name = context+'/weight'
 	if name in var_dict:
 		w = var_dict[name]
@@ -20,7 +20,7 @@ def weight(shape,record=True,dtype=None):
 	return w
 
 def weight_conv(shape,dtype=None):
-	context = tf.contrib.framework.get_name_scope()
+	context = tf.get_variable_scope().name
 	name = context+'./kernel'
 	if name in var_dict:
 		k = var_dict[name]
@@ -31,7 +31,7 @@ def weight_conv(shape,dtype=None):
 	return k
 
 def bias(shape,value=0.0,record=True,dtype=None):
-	context = tf.contrib.framework.get_name_scope()
+	context = tf.get_variable_scope().name
 	name = context+'/bias'
 	if name in var_dict:
 		b = var_dict[name]
@@ -71,7 +71,7 @@ def bias(shape,value=0.0,record=True,dtype=None):
 
 def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
 	global l_num
-	print('Conv Bias:',usebias,'Weight norm:',weight_norm)
+	# print('Conv Bias:',usebias,'Weight norm:',weight_norm)
 	inchannel = x.get_shape().as_list()[-1]
 	# set name
 	if name is None:
