@@ -14,6 +14,8 @@ PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 
+VAR_LIST = L.var_list
+
 def set_gpu(config_str):
 	import os
 	os.environ["CUDA_VISIBLE_DEVICES"] = config_str
@@ -576,6 +578,7 @@ class Model():
 
 	def shake_block(self,output,stride=1,ratio=4,activation=PARAM_RELU,batch_norm=True, group=2, is_training=True):
 		with tf.variable_scope('shake_block'+str(self.layernum)):
+			print('Shake block training:',is_training)
 			if is_training:
 				a = tf.random_uniform([],minval=0.,maxval=1.)
 				b = tf.random_uniform([],minval=0.,maxval=1.)

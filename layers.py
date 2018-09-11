@@ -3,17 +3,43 @@ import numpy as np
 
 l_num = 0
 
+var_dict = {}
+var_list = []
 ###########################################################
 #define weight and bias initialization
 
-def weight(shape,dtype=None):
-	return tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
+def weight(shape,record=True,dtype=None):
+	context = tf.contrib.framework.get_name_scope()
+	name = context+'/weight'
+	if name in var_dict:
+		w = var_dict[name]
+	else:
+		w = tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
+		var_dict[name] = w 
+		var_list.append(w)
+	return w
 
 def weight_conv(shape,dtype=None):
-	return tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
+	context = tf.contrib.framework.get_name_scope()
+	name = context+'./kernel'
+	if name in var_dict:
+		k = var_dict[name]
+	else:
+		k = tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
+		var_dict[name] = k
+		var_list.append(k)
+	return k
 
-def bias(shape,value=0.0,dtype=None):
-	return tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
+def bias(shape,value=0.0,record=True,dtype=None):
+	context = tf.contrib.framework.get_name_scope()
+	name = context+'/bias'
+	if name in var_dict:
+		b = var_dict[name]
+	else:
+		b = tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
+		var_dict[name] = b
+		var_list.append(b)
+	return b
 
 ###########################################################
 #define basic layers
@@ -159,23 +185,17 @@ def avgpooling(x,size,stride=None,name=None,pad='SAME'):
 
 def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 	if dtype is None:
-		dtype = x.dtype
+		dtype = tf.float32
 	with tf.variable_scope(name):
 		if nobias:
 			print('No biased fully connected layer is used!')
 			W = weight([insize,outsize],dtype=dtype)
-			tf.add_to_collection('decay_variables',W)
-			tf.summary.histogram(name+'/weight',W)
 			if activation==None:
 				return tf.matmul(x,W)
 			return activation(tf.matmul(x,W))
 		else:
 			W = weight([insize,outsize],dtype=dtype)
 			b = bias([outsize],dtype=dtype)
-			tf.add_to_collection('decay_variables',W)
-			tf.add_to_collection('decay_variables',b)
-			tf.summary.histogram(name+'/weight',W)
-			tf.summary.histogram(name+'/bias',b)
 			if activation==None:
 				return tf.matmul(x,W)+b
 			return activation(tf.matmul(x,W)+b)
