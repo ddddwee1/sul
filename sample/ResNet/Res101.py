@@ -23,8 +23,9 @@ class res_101():
 			mod.res_block(512,stride=1,activation=M.PARAM_LRELU)
 			mod.res_block(512,stride=1,activation=M.PARAM_LRELU)
 			# 16x16
-			for i in range(14):
-				mod.res_block(1024,stride=2,activation=M.PARAM_LRELU)
+			mod.res_block(1024,stride=1,activation=M.PARAM_LRELU)
+			for i in range(13):
+				mod.res_block(1024,stride=1,activation=M.PARAM_LRELU)
 			# 8x8
 			mod.res_block(2048,stride=2,activation=M.PARAM_LRELU)
 			mod.res_block(2048,stride=1,activation=M.PARAM_LRELU)
