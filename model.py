@@ -272,7 +272,21 @@ class Model():
 	def avgpoolLayer(self,size,stride=None,pad='SAME'):
 		if stride==None:
 			stride = size
-		self.result = L.avgpooling(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
+		self.result = L.avgpooling(self.result,size,stride,'avgpool_'+str(self.layernum),pad=pad)
+		self.inpsize = self.result.get_shape().as_list()
+		return self.result
+
+	def maxpool3dLayer(self,size,stride=None,pad='SAME'):
+		if stride==None:
+			stride = size
+		self.result = L.maxpooling3d(self.result,size,stride,'maxpool3d_'+str(self.layernum),pad=pad)
+		self.inpsize = self.result.get_shape().as_list()
+		return self.result
+
+	def avgpool3dLayer(self,size,stride=None,pad='SAME'):
+		if stride==None:
+			stride = size
+		self.result = L.avgpooling3d(self.result,size,stride,'avgpool3d_'+str(self.layernum),pad=pad)
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 

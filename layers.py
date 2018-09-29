@@ -208,6 +208,26 @@ def avgpooling(x,size,stride=None,name=None,pad='SAME'):
 			stride = size
 		return tf.nn.avg_pool(x,ksize=[1,size,size,1],strides=[1,stride,stride,1],padding=pad)
 
+def maxpooling3d(x,size,stride=None,name=None,pad='SAME'):
+	global l_num
+	if name is None:
+		name = 'maxpooling3d_l_'+str(l_num)
+		l_num+=1
+	with tf.variable_scope(name):
+		if stride is None:
+			stride = size
+		return tf.nn.max_pool3d(x,ksize=[1,size,size,size,1],strides=[1,stride,stride,stride,1],padding=pad)
+
+def avgpooling3d(x,size,stride=None,name=None,pad='SAME'):
+	global l_num
+	if name is None:
+		name = 'avgpooling3d_l_'+str(l_num)
+		l_num+=1
+	with tf.variable_scope(name):
+		if stride is None:
+			stride = size
+		return tf.nn.avg_pool3d(x,ksize=[1,size,size,size,1],strides=[1,stride,stride,stride,1],padding=pad)
+
 def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 	if dtype is None:
 		dtype = tf.float32
