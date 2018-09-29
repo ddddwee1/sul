@@ -222,11 +222,11 @@ class Model():
 			if isinstance(size,list):
 				kernel = size
 			else:
-				kernel = [size,size]
+				kernel = [size,size,size]
 			if layerin!=None:
 				self.result = layerin
 				self.inpsize = layerin.get_shape().as_list()
-			self.result = L.conv3D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+			self.result = L.conv3D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate)
 			if batch_norm:
 				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
 			self.layernum += 1
@@ -270,30 +270,26 @@ class Model():
 		return self.result
 
 	def avgpoolLayer(self,size,stride=None,pad='SAME'):
-		if stride==None:
-			stride = size
 		self.result = L.avgpooling(self.result,size,stride,'avgpool_'+str(self.layernum),pad=pad)
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
 	def maxpool3dLayer(self,size,stride=None,pad='SAME'):
-		if stride==None:
-			stride = size
 		self.result = L.maxpooling3d(self.result,size,stride,'maxpool3d_'+str(self.layernum),pad=pad)
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
 	def avgpool3dLayer(self,size,stride=None,pad='SAME'):
-		if stride==None:
-			stride = size
 		self.result = L.avgpooling3d(self.result,size,stride,'avgpool3d_'+str(self.layernum),pad=pad)
 		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
 	def flatten(self):
-		self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]])
-		self.transShape = [self.inpsize[1],self.inpsize[2],self.inpsize[3],0]
-		self.inpsize = [None,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]]
+		if len(self.inpsize)==5:
+			self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]*self.inpsize[4]])
+		else:
+			self.result = tf.reshape(self.result,[-1,self.inpsize[1]*self.inpsize[2]*self.inpsize[3]])
+		self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
 	def construct(self,shape):

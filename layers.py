@@ -76,18 +76,20 @@ def conv3D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=
 		name = 'conv_l_'+str(l_num)
 		l_num+=1
 	# with tf.variable_scope(name):
+	if isinstance(stride,int):
+		stride = [stride, stride, stride]
 	if isinstance(size,list):
 		kernel = size
 	else:
 		kernel = [size,size,size]
 	if (not kernel_data is None) and (not bias_data is None):
-		z = tf.layers.conv3d(x, outchn, kernel, strides=(stride, stride,stride), padding=pad,\
+		z = tf.layers.conv3d(x, outchn, kernel, strides=(stride[0], stride[1],stride[2]), padding=pad,\
 			dilation_rate=dilation_rate,\
 			kernel_initializer=tf.constant_initializer(kernel_data),\
 			use_bias=usebias,\
 			bias_initializer=tf.constant_initializer(bias_data),name=name)
 	else:
-		z = tf.layers.conv3d(x, outchn, kernel, strides=(stride, stride,stride), padding=pad,\
+		z = tf.layers.conv3d(x, outchn, kernel, strides=(stride[0], stride[1],stride[2]), padding=pad,\
 			dilation_rate=dilation_rate,\
 			kernel_initializer=tf.contrib.layers.xavier_initializer(),\
 			use_bias=usebias,\
@@ -214,9 +216,13 @@ def maxpooling3d(x,size,stride=None,name=None,pad='SAME'):
 		name = 'maxpooling3d_l_'+str(l_num)
 		l_num+=1
 	with tf.variable_scope(name):
+		if isinstance(stride,int):
+			stride = [stride, stride, stride]
+		if isinstance(size,int):
+			size = [size, size, size]
 		if stride is None:
 			stride = size
-		return tf.nn.max_pool3d(x,ksize=[1,size,size,size,1],strides=[1,stride,stride,stride,1],padding=pad)
+		return tf.nn.max_pool3d(x,ksize=[1,size[0],size[1],size[2],1],strides=[1,stride[0],stride[1],stride[2],1],padding=pad)
 
 def avgpooling3d(x,size,stride=None,name=None,pad='SAME'):
 	global l_num
@@ -224,9 +230,13 @@ def avgpooling3d(x,size,stride=None,name=None,pad='SAME'):
 		name = 'avgpooling3d_l_'+str(l_num)
 		l_num+=1
 	with tf.variable_scope(name):
+		if isinstance(stride,int):
+			stride = [stride, stride, stride]
+		if isinstance(size,int):
+			size = [size, size, size]
 		if stride is None:
 			stride = size
-		return tf.nn.avg_pool3d(x,ksize=[1,size,size,size,1],strides=[1,stride,stride,stride,1],padding=pad)
+		return tf.nn.avg_pool3d(x,ksize=[1,size[0],size[1],size[2],1],strides=[1,stride[0],stride[1],stride[2],1],padding=pad)
 
 def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 	if dtype is None:
