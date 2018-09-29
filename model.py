@@ -217,6 +217,23 @@ class Model():
 			self.activate(activation)
 		return self.result
 
+	def conv3dLayer(self,size,outchn,dilation_rate=1,stride=1,pad='SAME',activation=-1,batch_norm=False,layerin=None,usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
+		with tf.variable_scope('conv_'+str(self.layernum)):
+			if isinstance(size,list):
+				kernel = size
+			else:
+				kernel = [size,size]
+			if layerin!=None:
+				self.result = layerin
+				self.inpsize = layerin.get_shape().as_list()
+			self.result = L.conv3D(self.result,kernel,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+			if batch_norm:
+				self.result = L.batch_norm(self.result,'batch_norm_'+str(self.layernum),training=self.bntraining,epsilon=self.epsilon)
+			self.layernum += 1
+			self.inpsize = self.result.get_shape().as_list()
+			self.activate(activation)
+		return self.result
+
 	def dwconvLayer(self,kernel,multi,stride=1,pad='SAME',activation=-1,batch_norm=False,weight=None,usebias=True):
 		with tf.variable_scope('dwconv_'+str(self.layernum)):
 			if isinstance(kernel,list):
