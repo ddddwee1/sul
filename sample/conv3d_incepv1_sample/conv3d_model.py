@@ -67,7 +67,7 @@ class video_conv3d():
 		with tf.variable_scope('optimizer'):
 			self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logit_layer, labels=self.lab_holder))
 			with tf.control_dependencies(M.get_update_ops()):
-				self.train_step = tf.train.AdamOptimizer(0.0001).minimize(logit_layer)
+				self.train_step = tf.train.AdamOptimizer(0.0001).minimize(self.loss)
 
 	def train(self, inp, lab, normalize=True):
 		inp = np.float32(inp)
