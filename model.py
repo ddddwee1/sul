@@ -640,12 +640,11 @@ class Model():
 
 	def QAttention(self,feature):
 		with tf.variable_scope('Q_attention_'+str(self.layernum)):
-			self.result = tf.expand_dims(self.result,-1) 
-			e = tf.matmul(feature, self.result) # [bsize, feature_num, 1]
-			e = tf.squeeze(e,[-1])
-			e = tf.nn.softmax(e,-1)
-			out = e * self.result
-			out = tf.reduce_mean(out,1)
+			e = tf.matmul(feature, self.result, transpose_b=True) # [featsize, 1]
+			# e = tf.squeeze(e)
+			e = tf.nn.softmax(e)
+			out = e * feature
+			out = tf.reduce_mean(out,0,keep_dims=True)
 			self.result = out 
 			self.inpsize = self.result.get_shape().as_list()
 		return self.result
