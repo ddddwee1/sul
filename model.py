@@ -649,27 +649,32 @@ class Model():
 			self.inpsize = self.result.get_shape().as_list()
 		return self.result
 
-	def dyn_route(self,feature, is_squash=True):
+	def squash_2d(self):
+		with tf.variable_scope('squash2d_'+str(self.layernum)):
+			sqr = tf.reduce_sum(tf.square(self.result),-1,keep_dims=True)
+			activate = sqr / (1+sqr)
+			self.result = activate * tf.nn.l2_normalize(self.result,-1)
+			self.inpsize = self.result.get_shape().as_list()
+			self.layernum += 1
+		return self.result
+
+	def dyn_route(self,feature,iter_num, is_squash=True):
 		if is_squash:
-			with tf.variable_scope('squash_'+str(self.layernum)):
-				sqr = tf.reduce_sum(tf.square(self.result),-1,keep_dims=True)
-				activate = sqr / (1+sqr)
-				self.result = activate * tf.nn.l2_normalize(self.result,-1)
+			self.squash_2d()
 		with tf.variable_scope('route_merging_'+str(self.layernum)):
 			v_dim = feature.get_shape().as_list()[-1]
 			W = L.weight([vdim,vdim])
 			res = tf.matmul(self.result,W)
-			b = tf.zeros(tf.shape(result)[0])
+			b = tf.zeros(tf.shape(res)[0])
 			for i in range(iter_num):
 				with tf.variable_scope('Routing_'+str(self.layernum)+'_'+str(i)):
 					c = tf.nn.softmax(b)
-					c = tf.stop_gradient(c)
-					self.result = tf.reduce_sum(c*res,1,keep_dims=True)  # [BSIZE, 1, capout, vdim2, 1]
-					self.squash()
+					c = tf.stop_gradient(c) # dont know whether it s useful
+					self.result = tf.reduce_sum(c*res,0,keep_dims=True)  
+					self.squash_2d()
 					if i!=iter_num-1:
-						b = tf.reduce_sum(self.result * res, -2, keep_dims=True)
-			self.result = tf.einsum('ijklm->ikjlm',self.result)
-			self.inpsize = [None,outchn,1,vdim2,1]
+						b = tf.reduce_sum(tf.matmul(res, self.result, transpose_b=True), 1, keep_dims=True)
+			self.inpsize = self.result.get_shape().as_list()
 			self.layernum += 1
 		return self.result
 
