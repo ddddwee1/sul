@@ -255,6 +255,22 @@ def Fcnn(x,insize,outsize,name,activation=None,nobias=False,dtype=None):
 				return tf.matmul(x,W)+b
 			return activation(tf.matmul(x,W)+b)
 
+def NALU(x,insize,outsize,name,activation=None):
+	with tf.variable_scope(name):
+		W = weight([insize, outsize])
+		M = weight([insize, outsize]) 
+		G = weight([insize, outsize]) # gate
+
+		W = tf.tanh(W) * tf.sigmoid(M)
+
+		g = tf.sigmoid(tf.matmul(x, G))
+		m = tf.exp(tf.matmul(tf.log(tf.abs(x) + 1e-8), W))
+		a = tf.matmul(x, W)
+
+		out = g * a + (1. - g) * m 
+	return out 
+
+
 def MFM(x,half,name):
 	with tf.variable_scope(name):
 		#shape is in format [batchsize, x, y, channel]

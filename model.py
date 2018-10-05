@@ -678,6 +678,12 @@ class Model():
 			self.layernum += 1
 		return self.result
 
+	def NALU(self, outsize):
+		with tf.variable_scope('NALU_'+str(self.layernum)):
+			self.result = L.NALU(self.result, self.inpsize[1], outsize)
+			self.inpsize = self.result.get_shape().as_list()
+		return self.result
+
 # -------------- LSTM related functions & classes ----------------
 # Provide 3 types of LSTM for different usage.
 def LSTM(inp_holder, hidden_holder, state_holder,outdim,name,reuse=False):
