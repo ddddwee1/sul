@@ -17,6 +17,7 @@ def weight(shape,record=True,dtype=None):
 		w = tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
 		var_dict[name] = w 
 		var_list.append(w)
+		tf.add_to_collection('decay_variables',w)
 	return w
 
 def weight_conv(shape,dtype=None):
@@ -28,6 +29,7 @@ def weight_conv(shape,dtype=None):
 		k = tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
 		var_dict[name] = k
 		var_list.append(k)
+		tf.add_to_collection('decay_variables',k)
 	return k
 
 def bias(shape,value=0.0,record=True,dtype=None):
@@ -125,7 +127,6 @@ def conv3D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=
 # 			w = tf.constant(kernel_data,name='kernel')
 # 		else:
 # 			w = weight_conv(size)
-# 			tf.add_to_collection('decay_variables',w)
 
 		
 # 		if weight_norm:
@@ -150,7 +151,6 @@ def conv3D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=
 # 				b = tf.constant(bias_data,name='bias')
 # 			else:
 # 				b = bias([outchn])
-# 				tf.add_to_collection('decay_variables',b)
 # 			out = tf.nn.bias_add(out,b)
 # 	return out 
 
@@ -179,14 +179,12 @@ def conv2Ddw(x,inshape,size,multi,name,stride=1,pad='SAME',kernel_data=None,dtyp
 			kernel = [size,size,inshape,multi]
 		if kernel_data==None:
 			w = weight(kernel,dtype=dtype)
-			tf.add_to_collection('decay_variables',w)
 		else:
 			w = kernel_data
 		res = tf.nn.depthwise_conv2d(x,w,[1,stride,stride,1],padding=pad)
 		
 		if usebias:
 			b = bias([1,1,1,inshape*multi])
-			tf.add_to_collection('decay_variables',b)
 			res += b
 	return res
 

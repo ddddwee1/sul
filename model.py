@@ -108,13 +108,12 @@ def get_all_vars(scope=None):
 def get_update_ops(scope=None):
 	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
 
-def get_var_decay(rate,scope=None):
+def get_var_decay(rate,rank=2,scope=None):
 	with tf.variable_scope('weight_decay'):
 		w = tf.get_collection('decay_variables',scope=scope)
-		decay_ops = [tf.assign_sub( v , (1.-rate)*v) for v in w]
-		with tf.control_dependencies(decay_ops):
-			decay_op = tf.no_op()
-	return decay_op
+		norm_term = tf.reduce_sum(tf.pow(w,rank))
+	return norm_term
+
 
 # ETA class. I want to see the ETA. It's too boring to wait here.
 class ETA():
