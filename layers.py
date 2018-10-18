@@ -46,7 +46,7 @@ def bias(shape,value=0.0,record=True,dtype=None):
 ###########################################################
 #define basic layers
 
-def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1):
+def conv2D(x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1, weight_norm=False):
 	global l_num
 	print('Conv_bias:',usebias)
 	if name is None:

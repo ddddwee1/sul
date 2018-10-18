@@ -5,6 +5,7 @@ import os
 import time 
 
 acc = -1
+trainer_cnt = 0
 
 PARAM_RELU = 0
 PARAM_LRELU = 1
@@ -142,6 +143,37 @@ class ETA():
 			return '%d:%d:%d'%(h,m,s)
 		else:
 			return h,m,s
+
+# make a trainer to support gradient accumulation
+class Trainer():
+	def __init__(self,learning_rate,loss,scope=None,**kwargs):
+		with tf.variable_scope('Trainer_%d'%trainer_cnt):
+			opt = tf.train.AdamOptimizer(learning_rate,**kwargs)
+
+			tv = tf.trainable_variables(scope)
+
+			self.accum = [tf.Variable(tf.zeros_like(v.initialized_value()), trainable=False) for v in tv]
+			self.zero_op = [v.assign(tf.zeros_like(v)) for v in self.accum]
+
+			gs = opt.compute_gradients(loss, tv)
+
+			self.accum_op = [self.accum[i].assign_add(g[0]) for i,g in enumerate(gs)]
+			with tf.control_dependencies(self.accum_op):
+				self.apply = opt.apply_gradients([(self.accum[i],g[1]) for i,g in enumerate(gs)])
+				with tf.control_dependencies([self.apply]):
+					self.train_op = [v.assign(tf.zeros_like(v)) for v in self.accum]
+
+	def accumulate(self):
+		return self.accum_op
+
+	def train(self):
+		return self.train_op
+
+	def apply_gradients(self):
+		return self.apply
+
+	def zero(self):
+		return self.zero_op
 
 class Model():
 	def __init__(self,inp,size=None):
