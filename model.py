@@ -704,25 +704,26 @@ class Model():
 			else:
 				return res 
 
-	def dyn_route(self,feature,iter_num, is_squash=True):
+	def dyn_route(self,iter_num, is_squash=True):
 		with tf.variable_scope('route_merging_'+str(self.layernum)):
-			v_dim = feature.get_shape().as_list()[-1]
-			W = L.weight([vdim,vdim])
+			v_dim = self.result.get_shape().as_list()[-1]
+			W = L.weight([v_dim,v_dim])
 		def fusion(feat):
 			if is_squash:
 				feat = self.squash_2d(feat)
 			res = tf.matmul(feat,W)
-			b = tf.zeros(tf.shape(res)[0])
+			b = tf.zeros([tf.shape(res)[0],1])
 			for i in range(iter_num):
 				with tf.variable_scope('Routing_'+str(self.layernum)+'_'+str(i)):
 					c = tf.nn.softmax(b)
 					c = tf.stop_gradient(c) # dont know whether it s useful
-					feat = tf.reduce_mean(c*res,0)  
+					feat = tf.reduce_mean(c*res,0, keep_dims=True)  
 					# feat = self.squash_2d(feat)
 					if i!=iter_num-1:
-						b = tf.reduce_sum(tf.matmul(res, self.result, transpose_b=True), 1, keep_dims=True)
-			return feat
-		self.result = tf.map_fn(fusion, self.result)
+						b = tf.reduce_sum(tf.matmul(res, feat, transpose_b=True), 1, keep_dims=True)
+			return tf.squeeze(feat)
+		with tf.variable_scope('route_merging_'+str(self.layernum)):
+			self.result = tf.map_fn(fusion, self.result)
 		self.inpsize = self.result.get_shape().as_list()
 		self.layernum += 1
 		return self.result
@@ -813,3 +814,14 @@ class SimpleLSTM():
 					outputs.append(o)
 			out = tf.stack(outputs,1)
 		return out
+
+# --------functional blocks ------------
+def alpha_fusion(feat1,feat2):
+	with tf.variable_scope('alpha_fusion'):
+		a = tf.get_variable('alpha',[],initializer=tf.constant_initializer(0.0),dtype=tf.float32)
+		a = tf.sigmoid(a)
+		b = tf.random_uniform([],minval=0.,maxval=1.)
+
+		res2 = b * feat1 + (1-b)*feat2 
+		res = a * tf.stop_gradient(feat1) + (1-a)*tf.stop_gradient(feat2)
+	return res, res2 
