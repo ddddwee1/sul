@@ -21,6 +21,11 @@ def set_gpu(config_str):
 	import os
 	os.environ["CUDA_VISIBLE_DEVICES"] = config_str
 
+def reset_graph():
+	tf.reset_default_graph()
+	L.var_list = []
+	L.var_dict = {}
+
 def loadSess(modelpath=None,sess=None,modpath=None,mods=None,var_list=None,init=False, init_dict=None):
 #load session if there exist any models, and initialize the sess if not
 	assert modpath==None or mods==None
@@ -825,3 +830,4 @@ def alpha_fusion(feat1,feat2):
 		res2 = b * feat1 + (1-b)*feat2 
 		res = a * tf.stop_gradient(feat1) + (1-a)*tf.stop_gradient(feat2)
 	return res, res2 
+
