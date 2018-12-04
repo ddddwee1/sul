@@ -32,6 +32,7 @@ def loadSess(modelpath=None,sess=None,var_list=None,init=False, init_dict=None):
 			saver.restore(sess,mod)
 		else:
 			print('No checkpoint in folder, use initial graph...')
+		return saver 
 
 def accuracy(pred,y,name='acc'):
 	with tf.variable_scope(name):
@@ -151,7 +152,7 @@ class Model():
 		
 		# bn
 		if batch_norm:
-			self.batch_norm(self.result)
+			self.batch_norm()
 		# act
 		self.activate(activation)
 
@@ -170,3 +171,52 @@ class Model():
 		self.result = tf.reshape(self.result, shape)
 		return self.result
 
+	def deconvLayer(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
+		deconv = L.deconv2D(self.result, size, outchn, stride, usebias, pad, 'deconv_'+str(self.layernum))
+		self.result = deconv.output
+		if batch_norm:
+			self.batch_norm()
+
+		self.activate(activation)
+
+		self.layernum += 1
+		return self.result
+
+
+########### Network Template #########
+class Network():
+	def __init__(self):
+		if self.model_path[-1]!='/':
+			self.model_path += '/'
+		self.build_structure()
+		self.build_loss()
+		self.config_tensors()
+		self.start_sess()
+
+	def build_structure(self):
+		pass 
+
+	def build_loss(self):
+		pass 
+
+	def config_tensors(self):
+		pass
+
+	def start_sess(self):
+		self.sess = tf.Session()
+		self.saver = loadSess(self.model_path, self.sess, init=True)
+
+	def train(self):
+		pass
+
+	def eval(self):
+		pass 
+
+	def get_feat(self):
+		pass 
+
+	def load(self, path, var_list=None):
+		loadSess(path, self.sess, var_list=var_list)
+
+	def save(self, path):
+		self.saver.save(self.sess, self.model_path + path)

@@ -4,12 +4,18 @@ import numpy as np
 
 ###########################################################
 #define weight and bias initialization
-def weight(shape,dtype=None):
-	w = tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
+def weight(shape,data=None,dtype=None):
+	if data is not None:
+		w = tf.get_variable('weight',shape,initializer=tf.constant_initializer(data),dtype=dtype)
+	else:
+		w = tf.get_variable('weight',shape,initializer=tf.contrib.layers.xavier_initializer(),dtype=dtype)
 	return w
 
-def weight_conv(shape,dtype=None):
-	k = tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
+def weight_conv(shape,data=None,dtype=None):
+	if data is not None:
+		k = tf.get_variable('kernel',shape,initializer=tf.constant_initializer(data),dtype=dtype)
+	else:
+		k = tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
 	return k 
 
 def bias(shape,value=0.0,dtype=None):
@@ -82,7 +88,7 @@ class conv2D(Layer):
 	def _initialize(self):
 		# this will enlarge ckpt size. (at first time)
 		if self.kernel_data:
-			self.W = tf.constant(self.kernel_data, name='kernel')
+			self.W = weight_conv(self.kernel_data.shape, self.kernel_data)
 		else:
 			self.W = weight_conv(self.size)
 			if self.weight_norm:
@@ -214,3 +220,49 @@ class batch_norm(Layer):
 		if not epsilon is None:
 			return tf.layers.batch_normalization(inp,training=training,name=name,epsilon=epsilon)
 		return tf.layers.batch_normalization(inp,training=training,name=name)
+
+class deconv2D(Layer):
+	def __init__(self, x,size,outchn,stride=1,usebias=True,pad='SAME',name=None):
+		self.x = x
+		self.size = size 
+		self.outchn = outchn
+		self.name = name 
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+
+		super().__init__(name)
+
+	def _parse_args(self):
+		inp_size = self.x.get_shape().as_list()
+		inchannel = inp_size[-1]
+		if isinstance(self.size,list):
+			self.size = [self.size[0],self.size[1],self.outchn,inchannel]
+		else:
+			self.size = [self.size, self.size, self.outchn, inchannel]
+
+		if isinstance(self.stride, list):
+			if len(self.stride)==2:
+				self.stride = [1,self.stride[0],self.stride[1],1]
+		elif isinstance(self.stride, int):
+			self.stride = [1, self.stride, self.stride, 1]
+
+		# infer the output shape
+		if self.pad == 'SAME':
+			self.output_shape = [-1, inp_size[1]*self.stride[1], inp_size[2]*self.stride[2], outchn]
+		else:
+			self.output_shape = [-1, inp_size[1]*self.stride[1]+self.size[0]-self.stride[1], inp_size[2]*self.stride[2]+self.size[1]-self.stride[2], outchn]
+
+	def _initialize(self):
+		self.W = weight_conv(self.size)
+		self._add_variable(self.W)
+		if self.usebias:
+			self.b = bias([self.outchn])
+			self._add_variable(self.b)
+
+	def _deploy(self):
+		res = tf.nn.conv2d_transpose(self.x, self.W, self.output_shape, self.stride, padding=self.pad)
+		if self.usebias:
+			res = tf.nn.bias_add(res, self.b)
+		return res 
+
