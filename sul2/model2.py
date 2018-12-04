@@ -2,6 +2,7 @@ import layers2 as L
 import tensorflow as tf 
 import numpy as np 
 import os 
+import random
 
 PARAM_RELU = 0
 PARAM_LRELU = 1
@@ -220,3 +221,49 @@ class Network():
 
 	def save(self, path):
 		self.saver.save(self.sess, self.model_path + path)
+
+
+######### Data Reader Template ##########
+class data_reader():
+	def __init__(self, one_hot=None):
+		self.data_pos = 0
+		self.val_pos = 0
+		self.data = []
+		self.val = []
+		self.one_hot = False
+		if one_hot is not None:
+			self.one_hot = True
+			self.eye = np.eye(one_hot)
+		self.load_data()
+		
+	def get_next_batch(self,BSIZE):
+		if self.data_pos + BSIZE > len(self.data):
+			random.shuffle(self.data)
+			self.data_pos = 0
+		batch = self.data[self.data_pos : self.data_pos+BSIZE]
+		x = [i[0] for i in batch]
+		y = [i[1] for i in batch]
+		if self.one_hot:
+			y = self.eye[np.array(y)]
+		return x,y
+
+	def get_val_next_batch(self, BSIZE):
+		if self.val_pos + BSIZE >= len(self.val):
+			batch = self.val[self.val_pos:]
+			random.shuffle(self.val)
+			self.val_pos = 0
+			is_end = True
+		else:
+			batch = self.data[self.data_pos : self.data_pos+BSIZE]
+			is_end = False
+		x = [i[0] for i in batch]
+		y = [i[1] for i in batch]
+		if self.one_hot:
+			y = self.eye[np.array(y)]
+		return x,y, is_end
+
+	def get_train_iter(self, BSIZE):
+		return len(self.data)//BSIZE
+
+	def get_val_iter(self, BSIZE):
+		return len(self.val)//BSIZE + 1
