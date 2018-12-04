@@ -32,7 +32,7 @@ class Layer():
 			self.output = self._deploy()
 
 	def _add_variable(self,var):
-		if not self.variables:
+		if not hasattr(self,'variables'):
 			self.variables = []
 		self.variables.append(var)
 
@@ -59,7 +59,7 @@ class conv2D(Layer):
 		self.dilation_rate = dilation_rate
 		self.weight_norm = weight_norm
 
-		super.__init__(name)
+		super().__init__(name)
 
 	def _parse_args(self):
 		# set size
@@ -109,19 +109,20 @@ class conv2D(Layer):
 		self._add_variable(self.b)
 		
 	def _deploy(self):
-		out = tf.nn.conv2d(x,w,stride,pad,dilations=dilation_rate)
-		if self.b:
-			out = tf.nn.bias_add(out,b)
+		out = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out,self.b)
 		return out 
 
 class maxpoolLayer(Layer):
 	def __init__(self,x,size,stride=None,name=None,pad='SAME'):
 		self.x = x 
 		self.name = name
+		self.size = size
 		self.stride = stride
 		self.pad = pad
 
-		super.__init__(name)
+		super().__init__(name)
 
 	def _parse_args(self):
 		if isinstance(self.size, list):
@@ -148,7 +149,7 @@ class activation(Layer):
 		self.name = name
 		self.kwarg = kwarg
 
-		super.__init__(name)
+		super().__init__(name)
 
 	def _deploy(self):
 		if self.param == 0:
@@ -176,7 +177,7 @@ class activation(Layer):
 			res =  self.x
 		return res
 
-class fcLayer(layer):
+class fcLayer(Layer):
 	def __init__(self, x, outsize, usebias, name=None):
 		self.x = x 
 		self.outsize = outsize
@@ -187,16 +188,16 @@ class fcLayer(layer):
 
 	def _initialize(self):
 		insize = self.x.get_shape().as_list()[-1]
-		self.W = weight([insize, outsize])
+		self.W = weight([insize, self.outsize])
 		self._add_variable(self.W)
 		if self.usebias:
-			self.b = bias([outsize])
+			self.b = bias([self.outsize])
 			self._add_variable(self.b)
 
 	def _deploy(self):
 		res = tf.matmul(self.x, self.W)
 		if self.usebias:
-			res = self.bias_add(self.res, self.b)
+			res = tf.nn.bias_add(res, self.b)
 		return res 
 
 class batch_norm(Layer):
