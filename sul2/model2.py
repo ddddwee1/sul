@@ -41,6 +41,15 @@ def accuracy(pred,y,name='acc'):
 		acc = tf.reduce_mean(tf.cast(correct,tf.float32))
 	return acc
 
+def get_trainable_vars(scope=None):
+	return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope=scope)
+
+def get_all_vars(scope=None):
+	return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope=scope)
+
+def get_update_ops(scope=None):
+	return tf.get_collection(tf.GraphKeys.UPDATE_OPS,scope=scope)
+
 ##########################
 # ETA class. I want to see the ETA. It's too boring to wait here.
 class ETA():

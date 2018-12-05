@@ -217,9 +217,9 @@ class batch_norm(Layer):
 
 	def _deploy(self):
 		# will modify this to lower api in later version
-		if not epsilon is None:
-			return tf.layers.batch_normalization(inp,training=training,name=name,epsilon=epsilon)
-		return tf.layers.batch_normalization(inp,training=training,name=name)
+		if not self.epsilon is None:
+			return tf.layers.batch_normalization(self.x,training=self.training,name=self.name,epsilon=self.epsilon)
+		return tf.layers.batch_normalization(self.x,training=self.training,name=self.name)
 
 class deconv2D(Layer):
 	def __init__(self, x,size,outchn,stride=1,usebias=True,pad='SAME',name=None):
@@ -249,9 +249,9 @@ class deconv2D(Layer):
 
 		# infer the output shape
 		if self.pad == 'SAME':
-			self.output_shape = [-1, inp_size[1]*self.stride[1], inp_size[2]*self.stride[2], outchn]
+			self.output_shape = [tf.shape(self.x)[0], inp_size[1]*self.stride[1], inp_size[2]*self.stride[2], self.outchn]
 		else:
-			self.output_shape = [-1, inp_size[1]*self.stride[1]+self.size[0]-self.stride[1], inp_size[2]*self.stride[2]+self.size[1]-self.stride[2], outchn]
+			self.output_shape = [tf.shape(self.x)[0], inp_size[1]*self.stride[1]+self.size[0]-self.stride[1], inp_size[2]*self.stride[2]+self.size[1]-self.stride[2], self.outchn]
 
 	def _initialize(self):
 		self.W = weight_conv(self.size)
