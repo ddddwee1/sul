@@ -249,9 +249,9 @@ class deconv2D(Layer):
 
 		# infer the output shape
 		if self.pad == 'SAME':
-			self.output_shape = [tf.shape(self.x)[0], inp_size[1]*self.stride[1], inp_size[2]*self.stride[2], self.outchn]
+			self.output_shape = [tf.shape(self.x)[0], tf.shape(self.x)[1]*self.stride[1], tf.shape(self.x)[2]*self.stride[2], self.outchn]
 		else:
-			self.output_shape = [tf.shape(self.x)[0], inp_size[1]*self.stride[1]+self.size[0]-self.stride[1], inp_size[2]*self.stride[2]+self.size[1]-self.stride[2], self.outchn]
+			self.output_shape = [tf.shape(self.x)[0], tf.shape(self.x)[1]*self.stride[1]+self.size[0]-self.stride[1], tf.shape(self.x)[2]*self.stride[2]+self.size[1]-self.stride[2], self.outchn]
 
 	def _initialize(self):
 		self.W = weight_conv(self.size)
