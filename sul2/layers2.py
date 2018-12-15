@@ -5,6 +5,8 @@ import numpy as np
 ###########################################################
 #define weight and bias initialization
 def weight(shape,data=None,dtype=None):
+	if dtype is None:
+		dtype = tf.float32
 	if data is not None:
 		w = tf.get_variable('weight',shape,initializer=tf.constant_initializer(data),dtype=dtype)
 	else:
@@ -12,6 +14,8 @@ def weight(shape,data=None,dtype=None):
 	return w
 
 def weight_conv(shape,data=None,dtype=None):
+	if dtype is None:
+		dtype = tf.float32
 	if data is not None:
 		k = tf.get_variable('kernel',shape,initializer=tf.constant_initializer(data),dtype=dtype)
 	else:
@@ -19,27 +23,35 @@ def weight_conv(shape,data=None,dtype=None):
 	return k 
 
 def bias(shape,value=0.0,dtype=None):
+	if dtype is None:
+		dtype = tf.float32
 	b = tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
 	return b
 
 ###########################################################
 #define layer class
-class Layer():
+class Layer(tf.contrib.checkpoint.Checkpointable):
 	def __init__(self, name):
 		# template for layer definition
+		self.initialized = False
+		self.variables = []
 		if not name is None:
 			with tf.variable_scope(name):
+				if not tf.executing_eagerly():
+					self._parse_args()
+					self._initialize()
+					self.initialized = True
+					self.output = self._deploy()
+		else:
+			if not tf.executing_eagerly():
 				self._parse_args()
 				self._initialize()
+				self.initialized = True
 				self.output = self._deploy()
-		else:
-			self._parse_args()
-			self._initialize()
-			self.output = self._deploy()
 
 	def _add_variable(self,var):
-		if not hasattr(self,'variables'):
-			self.variables = []
+		# if not hasattr(self,'variables'):
+		# 	self.variables = []
 		self.variables.append(var)
 
 	def _initialize(self):
@@ -47,6 +59,14 @@ class Layer():
 
 	def _parse_args(self):
 		pass
+
+	def __call__(self, x):
+		self.x = tf.convert_to_tensor(x)
+		if not self.initialized:
+			self._parse_args()
+			self._initialize()
+			self.initialized = True
+		return self._deploy()
 
 ###########################################################
 #define basic layers
@@ -172,7 +192,7 @@ class activation(Layer):
 			res =  tf.tanh(self.x)
 		elif self.param == 4:
 			shape = self.x.get_shape().as_list()
-			res = tf.reshape(self.x,[-1,shape[1],shape[2],2,shape[-1]//2])
+			res = tf.reshape(self.x,[-1,shape[1],shape[2],2,shape[-1]//2]) # potential bug in conv_net
 			res = tf.reduce_max(res,axis=[3])
 		elif self.param == 5:
 			shape = self.x.get_shape().as_list()
