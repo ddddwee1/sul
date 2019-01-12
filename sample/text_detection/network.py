@@ -65,6 +65,9 @@ class text_net():
 		# function wrap-up for training process
 		pass 
 
+	def val(self, image, geo_label, mask_label, theta_label, quad_label):
+		pass
+
 	def get_output(self, image):
 		# get output of network
 		pass 
