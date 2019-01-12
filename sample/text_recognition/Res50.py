@@ -1,0 +1,90 @@
+import tensorflow as tf 
+import numpy as np 
+import model as M 
+
+def conv_blocks(mod,featuremap,kernel=3,stride=2):
+	mod.batch_norm()
+	mod.activate(M.PARAM_RELU)
+	buff = mod.get_current()
+	mod.pad(1)
+	mod.convLayer(kernel,featuremap,stride=stride,pad='VALID',activation=M.PARAM_RELU,batch_norm=True,usebias=False)
+	mod.pad(1)
+	branch = mod.convLayer(kernel,featuremap,pad='VALID',usebias=False)
+	mod.set_current(buff)
+	a = mod.convLayer(1,featuremap,stride=stride,usebias=False)
+	mod.sum(branch)
+
+def identity_block(mod,featuremap,kernel=3,stride=1):
+	buff = mod.get_current()
+	mod.batch_norm()
+	mod.activate(M.PARAM_RELU)
+	mod.pad(1)
+	mod.convLayer(kernel,featuremap,stride=stride,pad='VALID',activation=M.PARAM_RELU,batch_norm=True,usebias=False)
+	mod.pad(1)
+	mod.convLayer(kernel,featuremap,pad='VALID',usebias=False)
+	mod.sum(buff)
+
+def block5(mod):
+	mod.batch_norm()
+	mod.activate(M.PARAM_RELU)
+	buff = mod.get_current()
+	mod.pad(1)
+	mod.convLayer(3,512,pad='VALID',activation=M.PARAM_RELU,batch_norm=True,usebias=False)
+	mod.pad(2)
+	branch = mod.convLayer(3,1024,pad='VALID',usebias=False,dilation_rate=2)
+	mod.set_current(buff)
+	mod.convLayer(1,1024,usebias=False)
+	mod.sum(branch)
+
+def id5_block(mod):
+	buff = mod.get_current()
+	mod.batch_norm()
+	mod.activate(M.PARAM_RELU)
+	mod.pad(2)
+	mod.convLayer(3,512,pad='VALID',usebias=False,dilation_rate=2,batch_norm=True,activation=M.PARAM_RELU)
+	mod.pad(2)
+	mod.convLayer(3,1024,pad='VALID',usebias=False,dilation_rate=2)
+	mod.sum(buff)
+
+def last_block(mod,featuremap,dilation_rate):
+	mod.batch_norm()
+	mod.activate(M.PARAM_RELU)
+	buff = mod.get_current()
+	mod.convLayer(1,featuremap[0],pad='VALID',usebias=False,batch_norm=True,activation=M.PARAM_RELU)
+	mod.pad(dilation_rate)
+	mod.convLayer(3,featuremap[1],pad='VALID',usebias=False,batch_norm=True,activation=M.PARAM_RELU,dilation_rate=dilation_rate)
+	branch = mod.convLayer(1,featuremap[2],pad='VALID',usebias=False)
+	mod.set_current(buff)
+	mod.convLayer(1,featuremap[2],pad='VALID',usebias=False)
+	mod.sum(branch)
+
+def build_model(inp):
+	with tf.variable_scope('WideRes'):
+		mod = M.Model(inp)
+		mod.set_bn_training(False)
+		mod.set_bn_epsilon(1.0009999641624745e-05)
+		mod.convLayer(3,64,usebias=False)
+		c1 = mod.get_current_layer()
+		conv_blocks(mod,128)
+		identity_block(mod,128)
+		identity_block(mod,128)
+		c2 = mod.get_current_layer()
+		conv_blocks(mod,256)
+		identity_block(mod,256)
+		identity_block(mod,256)
+		c3 = mod.get_current_layer()
+		conv_blocks(mod,512)
+		identity_block(mod,512)
+		identity_block(mod,512)
+		identity_block(mod,512)
+		identity_block(mod,512)
+		identity_block(mod,512)
+		mod.get_current_layer()
+		block5(mod)
+		id5_block(mod)
+		id5_block(mod)
+		last_block(mod,[512,1024,2048],4)
+		last_block(mod,[1024,2048,4096],4)
+		# mod.batch_norm()
+		# mod.activate(M.PARAM_RELU)
+	return ,mod.get_current_layer(), c3, c2, c1
