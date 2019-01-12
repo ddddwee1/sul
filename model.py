@@ -423,6 +423,12 @@ class Model():
 			self.inpsize[2] *= multip
 		return self.result
 
+	def resize(self, size):
+		with tf.variable_scope('resize_'+str(self.layernum)):
+			self.result = tf.image.resize_images(self.result, size)
+			self.inpsize = self.result.get_shape().as_list()
+		return self.result
+
 	def reshape(self,shape):
 		with tf.variable_scope('reshape_'+str(self.layernum)):
 			self.result = tf.reshape(self.result,shape)

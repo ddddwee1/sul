@@ -31,7 +31,7 @@ class data_reader():
 
 	def interpret_label(self, label):
 		# input: label
-		# output: mask (128,128), geo (128,128,4), rot (128,128,1), quad (128,128,8)
+		# output: mask (128,128,1), geo (128,128,4), rot (128,128,1), quad (128,128,8)
 
 		## put your processing code here
 

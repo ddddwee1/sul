@@ -84,7 +84,7 @@ def build_model(inp):
 		id5_block(mod)
 		id5_block(mod)
 		last_block(mod,[512,1024,2048],4)
-		last_block(mod,[1024,2048,4096],4)
+		c4 = last_block(mod,[1024,2048,4096],4)
 		# mod.batch_norm()
 		# mod.activate(M.PARAM_RELU)
-	return ,mod.get_current_layer(), c3, c2, c1
+	return c4, c3, c2, c1
