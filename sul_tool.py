@@ -17,3 +17,13 @@ def extract_frames(fname,prefix,skip=1):
 			imgnames.append(imgname)
 		cnt += 1
 	return imgnames
+
+class video_saver():
+	def __init__(self,name,size, frame_rate=15.0):
+		self.name = name
+		fourcc = cv2.VideoWriter_fourcc(*'XVID')
+		self.vidwriter = cv2.VideoWriter(name,fourcc,frame_rate,(size[1],size[0]))
+	def write(self,img):
+		self.vidwriter.write(img)
+	def finish(self):
+		self.vidwriter.release()
