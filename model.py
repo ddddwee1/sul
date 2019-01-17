@@ -149,6 +149,50 @@ class ETA():
 		else:
 			return h,m,s
 
+# multi-process to read data
+class data_reader():
+	def __init__(self, data, fn, batch_size, shuffle=False, random_sample=False, processes=2, post_fn=None):
+		from multiprocessing import Pool
+		self.pool = Pool(processes)
+		print('start')
+		self.process_fn = fn
+		self.data = data
+		self.batch_size = batch_size
+		self.position = batch_size
+		self.post_fn = post_fn
+		self.random_sample = random_sample
+		if shuffle:
+			random.shuffle(self.data)
+		self._start_p(self.data[:batch_size])
+
+	def _start_p(self, data):
+		print('stara')
+		self.ps = []
+		for i in data:
+			self.ps.append(self.pool.apply_async(self.process_fn, [i]))
+
+	def get_next_batch(self):
+		# fetch data
+		res = [i.get() for i in self.ps]
+
+		# start new pre-fetch
+		if self.random_sample:
+			batch = random.sample(self.data, self.batch_size)
+		else:
+			if self.position + self.batch_size > len(self.data):
+				self.position = 0
+				random.shuffle(self.data)	
+			batch = self.data[self.position:self.position+self.batch_size]
+			self.position += self.batch_size
+		
+		self._start_p(batch)
+
+		# post_process the data
+		if self.post_fn is not None:
+			res = self.post_fn(res)
+		return res 
+
+
 # make a trainer to support gradient accumulation
 class Trainer():
 	def __init__(self,learning_rate,loss,scope=None,**kwargs):
@@ -836,4 +880,3 @@ def alpha_fusion(feat1,feat2):
 		res2 = b * feat1 + (1-b)*feat2 
 		res = a * tf.stop_gradient(feat1) + (1-a)*tf.stop_gradient(feat2)
 	return res, res2 
-
