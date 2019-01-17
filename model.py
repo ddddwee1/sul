@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np 
 import os 
 import time 
+import random
 
 acc = -1
 trainer_cnt = 0
@@ -154,24 +155,25 @@ class data_reader():
 	def __init__(self, data, fn, batch_size, shuffle=False, random_sample=False, processes=2, post_fn=None):
 		from multiprocessing import Pool
 		self.pool = Pool(processes)
-		print('start')
+		print('Starting parallel data loader...')
 		self.process_fn = fn
 		self.data = data
 		self.batch_size = batch_size
 		self.position = batch_size
 		self.post_fn = post_fn
 		self.random_sample = random_sample
+		self.shuffle = shuffle
 		if shuffle:
 			random.shuffle(self.data)
 		self._start_p(self.data[:batch_size])
 
 	def _start_p(self, data):
-		print('stara')
 		self.ps = []
 		for i in data:
 			self.ps.append(self.pool.apply_async(self.process_fn, [i]))
 
 	def get_next_batch(self):
+		# print('call')
 		# fetch data
 		res = [i.get() for i in self.ps]
 
@@ -181,7 +183,8 @@ class data_reader():
 		else:
 			if self.position + self.batch_size > len(self.data):
 				self.position = 0
-				random.shuffle(self.data)	
+				if self.shuffle:
+					random.shuffle(self.data)	
 			batch = self.data[self.position:self.position+self.batch_size]
 			self.position += self.batch_size
 		
