@@ -48,11 +48,14 @@ class ETA():
 		else:
 			return h,m,s
 
-########### model class ##########
+########### universal model class ##########
 class Model(tf.contrib.checkpoint.Checkpointable):
-	def __init__(self):
+	def __init__(self,**kwargs):
 		self.initialized = False
-		self.initialize()
+		self.initialize(**kwargs)
+
+	def initialize(self,**kwargs):
+		pass
 
 	def _gather_variables(self):
 		self.variables = []
@@ -73,11 +76,90 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 				res += l.variables
 			return res 
 
+	def set_bn_training(self, is_training):
+		atrs = dir(self)
+		for i in atrs:
+			if i[0] == '_':
+				continue
+			obj = getattr(self, i)
+			if isinstance(obj, Model):
+				obj.set_bn_training(is_training)
+			if isinstance(obj, L.batch_norm):
+				obj.is_training = is_training
+
+	def set_bn_epsilon(self, epsilon):
+		atrs = dir(self)
+		for i in atrs:
+			if i[0] == '_':
+				continue
+			obj = getattr(self, i)
+			if isinstance(obj, Model):
+				obj.set_bn_epsilon(epsilon)
+			if isinstance(obj, L.batch_norm):
+				obj.epsilon = epsilon
+
 	def __call__(self, x):
 		res = self.forward(x)
 		if not self.initialized:
 			self._gather_variables()
+			self.initialized = True
 		return res 
+
+########### universal layer classes ##########
+class ConvLayer(Model):
+	def initialize(self, size, outchn, dilation_rate=1, stride=1,pad='SAME',activation=-1,batch_norm=False, usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
+		self.conv = L.conv2D(size,outchn,stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+	def forward(self,x):
+		x = self.conv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			res = self.activation(x)
+		return res 
+
+class DeconvLayer(Model):
+	def initialize(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
+		self.deconv = L.deconv2D(size,outchn,stride=stride,usebias=usebias,pad=pad, name=None)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+
+	def forward(self,x):
+		x = self.deconv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			res = self.activation(x)
+		return res 
+
+class Dense(Model):
+	def initialize(self, outsize, usebias=True, batch_norm=False, activation=-1):
+		self.fclayer = L.fcLayer(outsize,usebias=usebias)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+
+	def forward(self,x):
+		x = self.fclayer(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			res = self.activation(x)
+		return res 
+
+flatten = L.flatten
 
 ########### saver ##########
 class Saver():
@@ -101,8 +183,8 @@ class Saver():
 		else:
 			self.ckpt.restore(path)
 
-######### Data Reader Template ##########
-class data_reader():
+######### Data Reader Template (serial) ##########
+class data_reader_serial():
 	def __init__(self, one_hot=None):
 		self.data_pos = 0
 		self.val_pos = 0
@@ -196,3 +278,50 @@ class list_reader():
 
 	def get_val_iter(self, BSIZE):
 		return len(self.val)//BSIZE + 1
+
+######### Data Reader Template (parallel) ##########
+# multi-process to read data
+class data_reader():
+	def __init__(self, data, fn, batch_size, shuffle=False, random_sample=False, processes=2, post_fn=None):
+		from multiprocessing import Pool
+		self.pool = Pool(processes)
+		print('Starting parallel data loader...')
+		self.process_fn = fn
+		self.data = data
+		self.batch_size = batch_size
+		self.position = batch_size
+		self.post_fn = post_fn
+		self.random_sample = random_sample
+		self.shuffle = shuffle
+		if shuffle:
+			random.shuffle(self.data)
+		self._start_p(self.data[:batch_size])
+
+	def _start_p(self, data):
+		self.ps = []
+		for i in data:
+			self.ps.append(self.pool.apply_async(self.process_fn, [i]))
+
+	def get_next_batch(self):
+		# print('call')
+		# fetch data
+		res = [i.get() for i in self.ps]
+
+		# start new pre-fetch
+		if self.random_sample:
+			batch = random.sample(self.data, self.batch_size)
+		else:
+			if self.position + self.batch_size > len(self.data):
+				self.position = 0
+				if self.shuffle:
+					random.shuffle(self.data)	
+			batch = self.data[self.position:self.position+self.batch_size]
+			self.position += self.batch_size
+		
+		self._start_p(batch)
+
+		# post_process the data
+		if self.post_fn is not None:
+			res = self.post_fn(res)
+		return res 
+

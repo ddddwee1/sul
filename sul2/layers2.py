@@ -22,10 +22,10 @@ def weight_conv(shape,data=None,dtype=None):
 		k = tf.get_variable('kernel',shape,initializer=tf.contrib.layers.xavier_initializer_conv2d(),dtype=dtype)
 	return k 
 
-def bias(shape,value=0.0,dtype=None):
+def bias(shape,name='bias',value=0.0,dtype=None,trainable=True):
 	if dtype is None:
 		dtype = tf.float32
-	b = tf.get_variable('bias',shape,initializer=tf.constant_initializer(value),dtype=dtype)
+	b = tf.get_variable(name,shape,initializer=tf.constant_initializer(value),dtype=dtype,trainable=True)
 	return b
 
 ###########################################################
@@ -72,7 +72,7 @@ class Layer(tf.contrib.checkpoint.Checkpointable):
 #define basic layers
 
 class conv2D(Layer):
-	def __init__(self, x,size,outchn,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
+	def __init__(self,size,outchn,x=None,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
 		self.x = x
 		self.size = size
 		self.outchn = outchn
@@ -141,7 +141,7 @@ class conv2D(Layer):
 		return out 
 
 class maxpoolLayer(Layer):
-	def __init__(self,x,size,stride=None,name=None,pad='SAME'):
+	def __init__(self,size,x=None,stride=None,name=None,pad='SAME'):
 		self.x = x 
 		self.name = name
 		self.size = size
@@ -169,7 +169,7 @@ class maxpoolLayer(Layer):
 		return tf.nn.max_pool(self.x, ksize=self.size, strides=self.stride, padding=self.pad)
 
 class activation(Layer):
-	def __init__(self, x, param, name=None, **kwarg):
+	def __init__(self, param, x=None, name=None, **kwarg):
 		self.x = x 
 		self.param = param
 		self.name = name
@@ -204,7 +204,7 @@ class activation(Layer):
 		return res
 
 class fcLayer(Layer):
-	def __init__(self, x, outsize, usebias, name=None):
+	def __init__(self, outsize, usebias, x=None, name=None):
 		self.x = x 
 		self.outsize = outsize
 		self.usebias = usebias
@@ -226,8 +226,9 @@ class fcLayer(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
-class batch_norm(Layer):
-	def __init__(self, x, training, epsilon, name=None):
+class batch_norm_graph(Layer):
+	def __init__(self, training, epsilon, x=None, name=None):
+		assert (not tf.executing_eagerly()),'batch_norm_graph can only run in graph mode'
 		self.x = x 
 		self.training = training
 		self.epsilon = epsilon
@@ -241,8 +242,35 @@ class batch_norm(Layer):
 			return tf.layers.batch_normalization(self.x,training=self.training,name=self.name,epsilon=self.epsilon)
 		return tf.layers.batch_normalization(self.x,training=self.training,name=self.name)
 
+class batch_norm(Layer):
+	def __init__(self, decay=0.01, epsilon=0.001, is_training=True, name=None):
+		assert tf.executing_eagerly(),'batch_norm can only run in graph mode'
+		self.name = name
+		self.decay = decay
+		self.epsilon = epsilon
+		self.is_training = is_training
+
+	def _initialize(self):
+		shape = self.x.get_shape().as_list()[-1]
+		self.moving_average = bias([shape],name='moving_average',value=0.0,trainable=False)
+		self.variance = bias([shape],name='variance',value=1.0,trainable=False)
+
+		self.gamma = bias([shape],name='gamma',value=1.0,trainable=True)
+		self.beta = bias([shape],name='beta',value=0.0,trainable=True)
+
+	def update(self,variable,value,decay):
+		delta = (variable - value) * self.decay
+		variable.assign_sub(delta)
+
+	def _deploy(self):
+		res, mean, var = tf.nn.fused_batch_norm(self.x, self.gamma, self.beta, self.moving_average, self.variance, self.epsilon, is_training=self.is_training)
+		if self.is_training:
+			self.update(self.moving_average, mean)
+			self.update(self.variance, var)
+		return res 
+
 class deconv2D(Layer):
-	def __init__(self, x,size,outchn,stride=1,usebias=True,pad='SAME',name=None):
+	def __init__(self,size,outchn,x=None,stride=1,usebias=True,pad='SAME',name=None):
 		self.x = x
 		self.size = size 
 		self.outchn = outchn
@@ -286,3 +314,14 @@ class deconv2D(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
+class flatten(Layer):
+	def __init__(self, x=None):
+		self.x = x 
+
+	def _deploy(self):
+		shape = self.x.get_shape().as_list()
+		num = 1
+		for k in shape[1:]:
+			num *= k
+		res = tf.reshape(self.x, [-1, num])
+		return res 

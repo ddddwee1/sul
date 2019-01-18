@@ -146,7 +146,7 @@ class Model():
 		return self.result
 
 	def batch_norm(self):
-		bn = L.batch_norm(self.result,training=self.bntraining,epsilon=self.epsilon,name='batch_norm_'+str(self.layernum))
+		bn = L.batch_norm_graph(x=self.result,training=self.bntraining,epsilon=self.epsilon,name='batch_norm_'+str(self.layernum))
 		self.result = bn.output
 		return self.result
 
@@ -157,7 +157,7 @@ class Model():
 				self.result = layerin
 
 			# conv
-			conv = L.conv2D(self.result,size,outchn,'conv_'+str(self.layernum),stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+			conv = L.conv2D(size,outchn,'conv_'+str(self.layernum),x=self.result,stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
 			self.result = conv.output
 
 			# bn
@@ -170,14 +170,14 @@ class Model():
 		return self.result
 
 	def maxpoolLayer(self,size,stride=None,pad='SAME'):
-		pool = L.maxpoolLayer(self.result,size,stride,'maxpool_'+str(self.layernum),pad=pad)
+		pool = L.maxpoolLayer(size,stride,'maxpool_'+str(self.layernum),pad=pad, x=self.result)
 		self.result = pool.output
 		return self.result
 
 	def fcLayer(self,outsize,activation=-1,usebias=True,batch_norm=False):
 		with tf.variable_scope('fc_'+str(self.layernum)):
 			self.layers.append(tf.get_variable_scope().name)
-			fc = L.fcLayer(self.result,outsize,name='fc_'+str(self.layernum),usebias=usebias)
+			fc = L.fcLayer(outsize,x=self.result,name='fc_'+str(self.layernum),usebias=usebias)
 			self.result = fc.output
 			
 			# bn
@@ -204,7 +204,7 @@ class Model():
 	def deconvLayer(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
 		with tf.variable_scope('deconv_'+str(self.layernum)):
 			self.layers.append(tf.get_variable_scope().name)
-			deconv = L.deconv2D(self.result, size, outchn, stride, usebias, pad, 'deconv_'+str(self.layernum))
+			deconv = L.deconv2D( size, outchn, self.result, stride, usebias, pad, 'deconv_'+str(self.layernum))
 			self.result = deconv.output
 			if batch_norm:
 				self.batch_norm()
