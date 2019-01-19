@@ -199,6 +199,7 @@ class data_reader():
 # make a trainer to support gradient accumulation
 class Trainer():
 	def __init__(self,learning_rate,loss,scope=None,**kwargs):
+		self.accum_step = tf.Variable(tf.zeros([]), trainable=False)
 		with tf.variable_scope('Trainer_%d'%trainer_cnt):
 			opt = tf.train.AdamOptimizer(learning_rate,**kwargs)
 
@@ -209,11 +210,11 @@ class Trainer():
 
 			gs = opt.compute_gradients(loss, tv)
 
-			self.accum_op = [self.accum[i].assign_add(g[0]) for i,g in enumerate(gs)]
+			self.accum_op = [self.accum[i].assign_add(g[0]) for i,g in enumerate(gs)] + [self.accum_step.assign_add(1.)]
 			with tf.control_dependencies(self.accum_op):
-				self.apply = opt.apply_gradients([(self.accum[i],g[1]) for i,g in enumerate(gs)])
+				self.apply = opt.apply_gradients([(self.accum[i]/self.accum_step,g[1]) for i,g in enumerate(gs)])
 				with tf.control_dependencies([self.apply]):
-					self.train_op = [v.assign(tf.zeros_like(v)) for v in self.accum]
+					self.train_op = [v.assign(tf.zeros_like(v)) for v in self.accum] + [self.accum_step.assign(0.)]
 
 	def accumulate(self):
 		return self.accum_op
