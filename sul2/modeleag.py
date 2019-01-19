@@ -1,5 +1,6 @@
 import layers2 as L 
 import tensorflow as tf 
+tf.enable_eager_execution()
 import numpy as np 
 import os 
 import random
@@ -13,9 +14,12 @@ PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 
 ######## util functions ###########
-def accuracy(pred,y,name='acc'):
+def accuracy(pred,y,name='acc', one_hot=True):
 	with tf.variable_scope(name):
-		correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(y,tf.int64))
+		if one_hot:
+			correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(tf.argmax(y,-1),tf.int64))
+		else:
+			correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(y,tf.int64))
 		acc = tf.reduce_mean(tf.cast(correct,tf.float32))
 	return acc
 
@@ -50,11 +54,11 @@ class ETA():
 
 ########### universal model class ##########
 class Model(tf.contrib.checkpoint.Checkpointable):
-	def __init__(self,**kwargs):
+	def __init__(self,*args,**kwargs):
 		self.initialized = False
-		self.initialize(**kwargs)
+		self.initialize(*args,**kwargs)
 
-	def initialize(self,**kwargs):
+	def initialize(self,*args,**kwargs):
 		pass
 
 	def _gather_variables(self):
@@ -120,8 +124,8 @@ class ConvLayer(Model):
 		if self.batch_norm:
 			x = self.bn(x)
 		if self.activation_!=-1:
-			res = self.activation(x)
-		return res 
+			x = self.activation(x)
+		return x 
 
 class DeconvLayer(Model):
 	def initialize(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
@@ -138,8 +142,8 @@ class DeconvLayer(Model):
 		if self.batch_norm:
 			x = self.bn(x)
 		if self.activation_!=-1:
-			res = self.activation(x)
-		return res 
+			x = self.activation(x)
+		return x 
 
 class Dense(Model):
 	def initialize(self, outsize, usebias=True, batch_norm=False, activation=-1):
@@ -156,10 +160,11 @@ class Dense(Model):
 		if self.batch_norm:
 			x = self.bn(x)
 		if self.activation_!=-1:
-			res = self.activation(x)
-		return res 
+			x = self.activation(x)
+		return x 
 
-flatten = L.flatten
+flatten = L.flatten()
+maxPool = L.maxpoolLayer
 
 ########### saver ##########
 class Saver():
@@ -175,6 +180,9 @@ class Saver():
 			self.ckpt = tf.train.Checkpoint(optimizer=optim, model=self.obj, optimizer_step=tf.train.get_or_create_global_step())
 	
 	def save(self, path):
+		head, tail = os.path.split(path)
+		if not os.path.exists(head):
+			os.makedirs(head)
 		self.ckpt.save(path)
 
 	def restore(self, path, ptype='folder'):

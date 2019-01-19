@@ -25,7 +25,7 @@ def weight_conv(shape,data=None,dtype=None):
 def bias(shape,name='bias',value=0.0,dtype=None,trainable=True):
 	if dtype is None:
 		dtype = tf.float32
-	b = tf.get_variable(name,shape,initializer=tf.constant_initializer(value),dtype=dtype,trainable=True)
+	b = tf.get_variable(name,shape,initializer=tf.constant_initializer(value),dtype=dtype,trainable=trainable)
 	return b
 
 ###########################################################
@@ -179,7 +179,7 @@ class activation(Layer):
 
 	def _deploy(self):
 		if self.param == 0:
-			res =  tf.relu(self.x)
+			res =  tf.nn.relu(self.x)
 		elif self.param == 1:
 			if 'leaky' in self.kwarg:
 				leaky = self.kwarg['leaky']
@@ -187,7 +187,7 @@ class activation(Layer):
 				leaky = 0.2
 			res =  tf.maximum(self.x,self.x*leaky)
 		elif self.param == 2:
-			res =  tf.elu(self.x)
+			res =  tf.nn.elu(self.x)
 		elif self.param == 3:
 			res =  tf.tanh(self.x)
 		elif self.param == 4:
@@ -315,8 +315,10 @@ class deconv2D(Layer):
 		return res 
 
 class flatten(Layer):
-	def __init__(self, x=None):
+	def __init__(self, x=None, name=None):
 		self.x = x 
+
+		super().__init__(name)
 
 	def _deploy(self):
 		shape = self.x.get_shape().as_list()
