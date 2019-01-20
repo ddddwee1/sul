@@ -180,18 +180,25 @@ class Saver():
 			self.ckpt = tf.train.Checkpoint(optimizer=optim, model=self.obj, optimizer_step=tf.train.get_or_create_global_step())
 	
 	def save(self, path):
+		print('Saving model to path:',path)
 		head, tail = os.path.split(path)
 		if not os.path.exists(head):
 			os.makedirs(head)
 		self.ckpt.save(path)
+		print('Model saved to path:',path)
 
 	def restore(self, path, ptype='folder'):
 		print('Load from:', path)
-		if ptype=='folder':
-			self.ckpt.restore(tf.train.latest_checkpoint(path))
-		else:
-			self.ckpt.restore(path)
-		print('Finish loading.')
+		try:
+			if ptype=='folder':
+				self.ckpt.restore(tf.train.latest_checkpoint(path))
+			else:
+				self.ckpt.restore(path)
+			print('Finish loading.')
+		except Exception as e:
+			print('Model restore failed, Exception:',e)
+			print('Model will auto-initialize after first iteration.')
+		
 
 ######### Data Reader Template (serial) ##########
 class data_reader_serial():

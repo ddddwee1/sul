@@ -208,20 +208,28 @@ class activation(Layer):
 		return res
 
 class fcLayer(Layer):
-	def __init__(self, outsize, usebias, x=None, name=None):
+	def __init__(self, outsize, usebias=True, x=None, values=None, name=None):
 		self.x = x 
 		self.outsize = outsize
 		self.usebias = usebias
 		self.name = name 
+		self.values = values
 
 		super().__init__(name)
 
 	def _initialize(self):
 		insize = self.x.get_shape().as_list()[-1]
-		self.W = weight([insize, self.outsize])
+		if self.values is not None:
+			self.W = weight([insize, self.outsize], data=self.values[0])
+		else:
+			self.W = weight([insize, self.outsize])
 		self._add_variable(self.W)
+
 		if self.usebias:
-			self.b = bias([self.outsize])
+			if self.values is not None:
+				self.b = bias([self.outsize], value=self.values[1])
+			else:
+				self.b = bias([self.outsize])
 			self._add_variable(self.b)
 
 	def _deploy(self):
