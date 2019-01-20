@@ -25,7 +25,7 @@ def weight_conv(shape,data=None,dtype=None):
 def bias(shape,name='bias',value=0.0,dtype=None,trainable=True):
 	if dtype is None:
 		dtype = tf.float32
-	b = tf.get_variable(name,shape,initializer=tf.constant_initializer(value),dtype=dtype,trainable=trainable)
+	b = tf.get_variable(name=name,shape=shape,initializer=tf.constant_initializer(value),dtype=dtype,trainable=trainable)
 	return b
 
 ###########################################################
@@ -72,7 +72,7 @@ class Layer(tf.contrib.checkpoint.Checkpointable):
 #define basic layers
 
 class conv2D(Layer):
-	def __init__(self,size,outchn,x=None,name=None,stride=1,pad='SAME',usebias=True,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
+	def __init__(self,size,outchn,x=None,name=None,stride=1,pad='SAME',usebias=True,values=None,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
 		self.x = x
 		self.size = size
 		self.outchn = outchn
@@ -80,8 +80,12 @@ class conv2D(Layer):
 		self.stride = stride
 		self.pad = pad 
 		self.usebias = usebias
-		self.kernel_data = kernel_data
-		self.bias_data = bias_data
+		if values is None:
+			self.kernel_data = None
+			self.bias_data = None
+		else:
+			self.kernel_data = values[0]
+			self.bias_data = values[1]
 		self.dilation_rate = dilation_rate
 		self.weight_norm = weight_norm
 
@@ -107,7 +111,7 @@ class conv2D(Layer):
 
 	def _initialize(self):
 		# this will enlarge ckpt size. (at first time)
-		if self.kernel_data:
+		if self.kernel_data is not None:
 			self.W = weight_conv(self.kernel_data.shape, self.kernel_data)
 		else:
 			self.W = weight_conv(self.size)
@@ -128,8 +132,8 @@ class conv2D(Layer):
 
 		# 
 		if self.usebias:
-			if self.bias_data:
-				self.b = bias([self.outchn], self.bias_data)
+			if self.bias_data is not None:
+				self.b = bias([self.outchn], value=self.bias_data)
 			else:
 				self.b = bias([self.outchn])
 		self._add_variable(self.b)
@@ -243,20 +247,30 @@ class batch_norm_graph(Layer):
 		return tf.layers.batch_normalization(self.x,training=self.training,name=self.name)
 
 class batch_norm(Layer):
-	def __init__(self, decay=0.01, epsilon=0.001, is_training=True, name=None):
+	def __init__(self, decay=0.01, epsilon=0.001, is_training=True, name=None, values=None):
 		assert tf.executing_eagerly(),'batch_norm can only run in graph mode'
 		self.name = name
 		self.decay = decay
 		self.epsilon = epsilon
 		self.is_training = is_training
+		self.values = values
+
+		super().__init__(name)
 
 	def _initialize(self):
 		shape = self.x.get_shape().as_list()[-1]
-		self.moving_average = bias([shape],name='moving_average',value=0.0,trainable=False)
-		self.variance = bias([shape],name='variance',value=1.0,trainable=False)
+		if self.values is None:
+			self.moving_average = bias([shape],name='moving_average',value=0.0,trainable=False)
+			self.variance = bias([shape],name='variance',value=1.0,trainable=False)
 
-		self.gamma = bias([shape],name='gamma',value=1.0,trainable=True)
-		self.beta = bias([shape],name='beta',value=0.0,trainable=True)
+			self.gamma = bias([shape],name='gamma',value=1.0,trainable=True)
+			self.beta = bias([shape],name='beta',value=0.0,trainable=True)
+		else:
+			self.moving_average = bias([shape],name='moving_average',value=self.values[0],trainable=False)
+			self.variance = bias([shape],name='variance',value=self.values[1],trainable=False)
+
+			self.gamma = bias([shape],name='gamma',value=self.values[2],trainable=True)
+			self.beta = bias([shape],name='beta',value=self.values[3],trainable=True)
 
 	def update(self,variable,value,decay):
 		delta = (variable - value) * self.decay

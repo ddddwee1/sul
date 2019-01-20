@@ -186,10 +186,12 @@ class Saver():
 		self.ckpt.save(path)
 
 	def restore(self, path, ptype='folder'):
+		print('Load from:', path)
 		if ptype=='folder':
 			self.ckpt.restore(tf.train.latest_checkpoint(path))
 		else:
 			self.ckpt.restore(path)
+		print('Finish loading.')
 
 ######### Data Reader Template (serial) ##########
 class data_reader_serial():
@@ -333,3 +335,12 @@ class data_reader():
 			res = self.post_fn(res)
 		return res 
 
+
+######### short-cut functions #########
+
+def pad(x, pad):
+	if isinstance(pad, list):
+		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [pad[2],pad[3]], [0,0]])
+	else:
+		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[0,0]])
+	return x 
