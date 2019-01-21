@@ -10,6 +10,7 @@ class GAN(M.Network):
 
 	def build_structure(self):
 		self.input_holder = tf.placeholder(tf.float32,[None, 64])
+		self.image_holder = tf.placeholder(tf.float32,[None, 64, 64, 3])
 		
 		self.recon = self.gen(self.input_holder)
 		self.dis_g = self.dis(self.recon)
