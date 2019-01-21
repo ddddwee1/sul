@@ -175,6 +175,36 @@ class Dense(Model):
 flatten = L.flatten()
 maxPool = L.maxpoolLayer
 
+########### higher wrapped block ##########
+
+class res_block(Model):
+	def initialize(self, outchn, stride=1, ratio=4, activation=PARAM_RELU):
+		self.outchn = outchn
+		# self.stride = stride
+		self.activ = L.activation(activation)
+		self.bn = L.batch_norm()
+		self.l1 = ConvLayer(1, outchn//ratio, activation=PARAM_RELU, batch_norm=True)
+		self.l2 = ConvLayer(3, outchn//ratio, activation=PARAM_RELU, batch_norm=True, stride=stride)
+		self.l3 = ConvLayer(1, outchn)
+		self.shortcut_conv = ConvLayer(1, outchn, activation=PARAM_RELU, stride=stride)
+		self.shortcut_pool = L.maxpoolLayer(stride)
+
+	def forward(self, x):
+		inshape = x.get_shape().as_list()[-1]
+		if inshape==self.outchn:
+			short = self.shortcut_pool(x)
+		else:
+			short = self.shortcut_conv(x)
+
+		branch = self.bn(x)
+		branch = self.activ(branch)
+		branch = self.l1(branch)
+		branch = self.l2(branch)
+		branch = self.l3(branch)
+
+		return branch + short
+
+
 ########### saver ##########
 class Saver():
 	def __init__(self, model, optim=None):
