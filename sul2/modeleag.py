@@ -56,6 +56,7 @@ class ETA():
 class Model(tf.contrib.checkpoint.Checkpointable):
 	def __init__(self,*args,**kwargs):
 		self.initialized = False
+		self.variables = []
 		self.initialize(*args,**kwargs)
 
 	def initialize(self,*args,**kwargs):
@@ -68,8 +69,16 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 			if i[0] == '_':
 				continue
 			obj = getattr(self, i)
-			if isinstance(obj, Model) or isinstance(obj, L.Layer):
-				self.variables += obj.variables
+			self.variables += self._gather_variables_recursive(obj)
+
+	def _gather_variables_recursive(self, obj):
+		result = []
+		if isinstance(obj, list) or isinstance(obj, tuple):
+			for sub_obj in obj:
+				result += self._gather_variables_recursive(sub_obj)
+		elif isinstance(obj, Model) or isinstance(obj, L.Layer):
+			result += obj.variables
+		return result
 
 	def get_variables(self, layers=None):
 		if layers is None:
