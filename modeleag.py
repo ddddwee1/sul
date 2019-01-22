@@ -237,7 +237,29 @@ class Saver():
 		except Exception as e:
 			print('Model restore failed, Exception:',e)
 			print('Model will auto-initialize after first iteration.')
-		
+
+######### Gradient accumulator #########
+class grad_accumulator():
+	def __init__(self):
+		self.steps = 0
+		self.grads = []
+
+	def accumulate(self, grads):
+		if len(grads) == 0:
+			self.grads = grads
+		else:
+			for old_g, new_g in zip(self.grads, grads):
+				old_g.assign_add(new_g)
+		self.steps += 1
+
+	def get_gradient(self):
+		res = [i/self.steps for i in self.grads]
+		self.grads = []
+		self.steps = 0
+		return res
+
+	def get_step(self):
+		return self.steps
 
 ######### Data Reader Template (serial) ##########
 class data_reader_serial():
