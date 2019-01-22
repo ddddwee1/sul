@@ -177,7 +177,7 @@ maxPool = L.maxpoolLayer
 
 ########### higher wrapped block ##########
 
-class res_block(Model):
+class ResBlock(Model):
 	def initialize(self, outchn, stride=1, ratio=4, activation=PARAM_RELU):
 		self.outchn = outchn
 		# self.stride = stride
@@ -239,7 +239,7 @@ class Saver():
 			print('Model will auto-initialize after first iteration.')
 
 ######### Gradient accumulator #########
-class grad_accumulator():
+class GradAccumulator():
 	def __init__(self):
 		self.steps = 0
 		self.grads = []
@@ -262,7 +262,7 @@ class grad_accumulator():
 		return self.steps
 
 ######### Data Reader Template (serial) ##########
-class data_reader_serial():
+class DataReaderSerial():
 	def __init__(self, one_hot=None):
 		self.data_pos = 0
 		self.val_pos = 0
@@ -308,7 +308,7 @@ class data_reader_serial():
 	def get_val_iter(self, BSIZE):
 		return len(self.val)//BSIZE + 1
 
-class list_reader():
+class ListReader():
 	def __init__(self, one_hot=None):
 		self.data_pos = 0
 		self.val_pos = 0
@@ -359,7 +359,7 @@ class list_reader():
 
 ######### Data Reader Template (parallel) ##########
 # multi-process to read data
-class data_reader():
+class DataReader():
 	def __init__(self, data, fn, batch_size, shuffle=False, random_sample=False, processes=2, post_fn=None):
 		from multiprocessing import Pool
 		self.pool = Pool(processes)
