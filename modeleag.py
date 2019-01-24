@@ -4,6 +4,7 @@ tf.enable_eager_execution()
 import numpy as np 
 import os 
 import random
+import time
 
 PARAM_RELU = 0
 PARAM_LRELU = 1
@@ -111,8 +112,9 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 			if isinstance(obj, L.batch_norm):
 				obj.epsilon = epsilon
 
-	def __call__(self, x):
-		res = self.forward(x)
+	def __call__(self, x, *args, **kwargs):
+		x = tf.convert_to_tensor(x, preferred_dtype=tf.float32)
+		res = self.forward(x, *args, **kwargs)
 		if not self.initialized:
 			self._gather_variables()
 			self.initialized = True
@@ -230,7 +232,9 @@ class Saver():
 		print('Load from:', path)
 		try:
 			if ptype=='folder':
-				self.ckpt.restore(tf.train.latest_checkpoint(path))
+				last_ckpt = tf.train.latest_checkpoint(path)
+				print('Checkpoint:', last_ckpt)
+				self.ckpt.restore(last_ckpt)
 			else:
 				self.ckpt.restore(path)
 			print('Finish loading.')
@@ -412,3 +416,14 @@ def pad(x, pad):
 	else:
 		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[0,0]])
 	return x 
+
+def image_transform(x, H, out_shape=None, interpolation='NEAREST'):
+	# Will produce error if not specify 'output_shape' in eager mode
+	shape = x.get_shape().as_list()
+	if out_shape is None:
+		if len(shape)==4:
+			out_shape = shape[1:3]
+		else:
+			out_shape = shape[:2]
+	return tf.contrib.image.transform(x, H, interpolation=interpolation, output_shape=out_shape)
+ 
