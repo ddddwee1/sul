@@ -1,5 +1,7 @@
 import layers2 as L 
 import tensorflow as tf 
+config = tf.ConfigProto()
+config.gpu_options.allow_growth=True
 tf.enable_eager_execution()
 import numpy as np 
 import os 
@@ -174,7 +176,7 @@ class Dense(Model):
 			x = self.activation(x)
 		return x 
 
-flatten = L.flatten()
+flatten = L.flatten
 maxPool = L.maxpoolLayer
 
 ########### higher wrapped block ##########
