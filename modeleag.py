@@ -2,7 +2,7 @@ import layers2 as L
 import tensorflow as tf 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
-tf.enable_eager_execution()
+tf.enable_eager_execution(config=config)
 import numpy as np 
 import os 
 import random
@@ -94,14 +94,21 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 
 	def set_bn_training(self, is_training):
 		atrs = dir(self)
+		# print(atrs)
 		for i in atrs:
 			if i[0] == '_':
 				continue
 			obj = getattr(self, i)
-			if isinstance(obj, Model):
-				obj.set_bn_training(is_training)
-			if isinstance(obj, L.batch_norm):
-				obj.is_training = is_training
+			self._set_bn_training_recursive(obj, is_training)
+
+	def _set_bn_training_recursive(self, obj, is_training):
+		if isinstance(obj, list):
+			for sub_obj in obj:
+				self._set_bn_training_recursive(sub_obj, is_training)
+		if isinstance(obj, Model) and obj!=self:
+			obj.set_bn_training(is_training)
+		if isinstance(obj, L.batch_norm):
+			obj.is_training = is_training
 
 	def set_bn_epsilon(self, epsilon):
 		atrs = dir(self)
@@ -126,6 +133,23 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 class ConvLayer(Model):
 	def initialize(self, size, outchn, dilation_rate=1, stride=1,pad='SAME',activation=-1,batch_norm=False, usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
 		self.conv = L.conv2D(size,outchn,stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+	def forward(self,x):
+		x = self.conv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			x = self.activation(x)
+		return x 
+
+class ConvLayer1D(Model):
+	def initialize(self, size, outchn, dilation_rate=1, stride=1,pad='SAME',activation=-1,batch_norm=False, usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
+		self.conv = L.conv1D(size,outchn,stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
 		self.batch_norm = batch_norm
 		self.activation_ = activation
 		if batch_norm:
@@ -176,7 +200,7 @@ class Dense(Model):
 			x = self.activation(x)
 		return x 
 
-flatten = L.flatten
+flatten = L.flatten()
 maxPool = L.maxpoolLayer
 
 ########### higher wrapped block ##########
@@ -236,6 +260,9 @@ class Saver():
 			if ptype=='folder':
 				last_ckpt = tf.train.latest_checkpoint(path)
 				print('Checkpoint:', last_ckpt)
+				if last_ckpt is None:
+					print('No model found in checkpoint.')
+					print('Model will auto-initialize after first iteration.')
 				self.ckpt.restore(last_ckpt)
 			else:
 				self.ckpt.restore(path)
