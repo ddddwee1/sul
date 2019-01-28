@@ -1,6 +1,9 @@
 import tensorflow as tf 
 import numpy as np 
 
+def set_gpu(config_str):
+	import os
+	os.environ["CUDA_VISIBLE_DEVICES"] = config_str
 
 ###########################################################
 #define weight and bias initialization
