@@ -67,7 +67,7 @@ def lossFunc(x, conf, geo, model):
 		losses = [conf_ls, ls_xy, ls_wh]
 		weights = [10, 0.1, 1]
 		loss_total = sum([weights[i]*losses[i] for i in range(len(losses))])
-	return losses, loss_total, tape
+	return losses, loss_total, tape, pred_conf, pred_geo
 
 def applyGrad(loss, model, optim, tape):
 	grad = tape.gradient(loss, model.variables)

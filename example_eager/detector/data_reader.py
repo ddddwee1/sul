@@ -112,10 +112,10 @@ def process_image(img, annot):
 	img, annot = random_translate(img, annot, 512)
 	return img, annot
 
-def draw(img, annot):
-	img = img.copy()
+def draw(img, annot, color=(0,255,0)):
+	img = np.uint8(img.copy())
 	for a in annot:
-		cv2.rectangle(img, (int(a[0]), int(a[1])), (int(a[2]), int(a[3])), (0,255,0), 2)
+		cv2.rectangle(img, (int(a[0]), int(a[1])), (int(a[2]), int(a[3])), color, 2)
 	return img 
 
 def annot_to_grid(img, annot, grid):
