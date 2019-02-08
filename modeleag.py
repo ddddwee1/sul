@@ -164,9 +164,44 @@ class ConvLayer1D(Model):
 			x = self.activation(x)
 		return x 
 
+class ConvLayer3D(Model):
+	def initialize(self, size, outchn, dilation_rate=1, stride=1,pad='SAME',activation=-1,batch_norm=False, usebias=True,kernel_data=None,bias_data=None,weight_norm=False):
+		self.conv = L.conv3D(size,outchn,stride=stride,pad=pad,usebias=usebias,kernel_data=kernel_data,bias_data=bias_data,dilation_rate=dilation_rate,weight_norm=weight_norm)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+	def forward(self,x):
+		x = self.conv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			x = self.activation(x)
+		return x 
+
 class DeconvLayer(Model):
 	def initialize(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
 		self.deconv = L.deconv2D(size,outchn,stride=stride,usebias=usebias,pad=pad, name=None)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+
+	def forward(self,x):
+		x = self.deconv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			x = self.activation(x)
+		return x 
+
+class DeconvLayer3D(Model):
+	def initialize(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
+		self.deconv = L.deconv3D(size,outchn,stride=stride,usebias=usebias,pad=pad, name=None)
 		self.batch_norm = batch_norm
 		self.activation_ = activation
 		if batch_norm:

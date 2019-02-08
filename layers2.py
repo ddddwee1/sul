@@ -123,7 +123,7 @@ class conv2D(Layer):
 				self.W = self.W.initialized_value()
 				self.W = tf.nn.l2_normalize(self.W, [0,1,2])
 				print('Initialize weight norm')
-				x_init = tf.nn.conv2d(self.x,self.W,stride,pad,dilations=dilation_rate)
+				x_init = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
 				m_init, v_init = tf.nn.moments(x_init,[0,1,2])
 				s_init = 1. / tf.sqrt(v_init + 1e-8)
 				s = tf.get_variable('weight_scale',dtype=tf.float32,initializer=s_init)
@@ -143,6 +143,79 @@ class conv2D(Layer):
 		
 	def _deploy(self):
 		out = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out,self.b)
+		return out 
+
+class conv3D(Layer):
+	def __init__(self,size,outchn,x=None,name=None,stride=1,pad='SAME',usebias=True,values=None,kernel_data=None,bias_data=None,dilation_rate=1,weight_norm=False):
+		self.x = x
+		self.size = size
+		self.outchn = outchn
+		self.name = name
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+		if values is None:
+			self.kernel_data = None
+			self.bias_data = None
+		else:
+			self.kernel_data = values[0]
+			self.bias_data = values[1]
+		self.dilation_rate = dilation_rate
+		self.weight_norm = weight_norm
+
+		super().__init__(name)
+
+	def _parse_args(self):
+		# set size
+		inchannel = self.x.get_shape().as_list()[-1]
+		if isinstance(self.size,list):
+			self.size = [self.size[0], self.size[1], self.size[2],inchannel,self.outchn]
+		else:
+			self.size = [self.size, self.size, self.size, inchannel, self.outchn]
+		# set stride
+		if isinstance(self.stride,list):
+			self.stride = [1,self.stride[0],self.stride[1], self.stride[2],1]
+		else:
+			self.stride = [1,self.stride, self.stride, self.stride, 1]
+		# set dilation
+		if isinstance(self.dilation_rate,list):
+			self.dilation_rate = [1,self.dilation_rate[0],self.dilation_rate[1],self.dilation_rate[2],1]
+		else:
+			self.dilation_rate = [1,self.dilation_rate,self.dilation_rate,self.dilation_rate,1]
+
+	def _initialize(self):
+		# this will enlarge ckpt size. (at first time)
+		if self.kernel_data is not None:
+			self.W = weight_conv(self.kernel_data.shape, self.kernel_data)
+		else:
+			self.W = weight_conv(self.size)
+			if self.weight_norm:
+				print('Enable weight norm')
+				self.W = self.W.initialized_value()
+				self.W = tf.nn.l2_normalize(self.W, [0,1,2])
+				print('Initialize weight norm')
+				x_init = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
+				m_init, v_init = tf.nn.moments(x_init,[0,1,2])
+				s_init = 1. / tf.sqrt(v_init + 1e-8)
+				s = tf.get_variable('weight_scale',dtype=tf.float32,initializer=s_init)
+				self.S = s.initialized_value()
+				self.S = tf.reshape(self.S,[1,1,1,outchn])
+				self.W = self.S *self.W
+				self._add_variable(self.S)
+		self._add_variable(self.W)
+
+		# 
+		if self.usebias:
+			if self.bias_data is not None:
+				self.b = bias([self.outchn], value=self.bias_data)
+			else:
+				self.b = bias([self.outchn])
+		self._add_variable(self.b)
+		
+	def _deploy(self):
+		out = tf.nn.conv3d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
 			out = tf.nn.bias_add(out,self.b)
 		return out 
@@ -187,7 +260,7 @@ class conv1D(Layer):
 				self.W = self.W.initialized_value()
 				self.W = tf.nn.l2_normalize(self.W, [0,1,2])
 				print('Initialize weight norm')
-				x_init = tf.nn.conv2d(self.x,self.W,stride,pad,dilations=dilation_rate)
+				x_init = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
 				m_init, v_init = tf.nn.moments(x_init,[0,1,2])
 				s_init = 1. / tf.sqrt(v_init + 1e-8)
 				s = tf.get_variable('weight_scale',dtype=tf.float32,initializer=s_init)
@@ -307,22 +380,6 @@ class fcLayer(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
-class batch_norm_graph(Layer):
-	def __init__(self, training, epsilon, x=None, name=None):
-		assert (not tf.executing_eagerly()),'batch_norm_graph can only run in graph mode'
-		self.x = x 
-		self.training = training
-		self.epsilon = epsilon
-		self.name = name
-
-		super().__init__(name)
-
-	def _deploy(self):
-		# will modify this to lower api in later version
-		if not self.epsilon is None:
-			return tf.layers.batch_normalization(self.x,training=self.training,name=self.name,epsilon=self.epsilon)
-		return tf.layers.batch_normalization(self.x,training=self.training,name=self.name)
-
 class batch_norm(Layer):
 	def __init__(self, decay=0.01, epsilon=0.001, is_training=True, name=None, values=None):
 		assert tf.executing_eagerly(),'batch_norm can only run in graph mode'
@@ -354,9 +411,12 @@ class batch_norm(Layer):
 		variable.assign_sub(delta)
 
 	def _deploy(self):
-		inp_dim_num = len(self.x.get_shape().as_list())
+		inp_shape = self.x.get_shape().as_list()
+		inp_dim_num = len(inp_shape)
 		if inp_dim_num==3:
 			self.x = tf.expand_dims(self.x, axis=1)
+		elif inp_dim_num==5:
+			self.x = tf.reshape(self.x, [inp_shape[0], inp_shape[1], inp_shape[2]*inp_shape[3], inp_shape[4]])
 		if self.is_training:
 			res, mean, var = tf.nn.fused_batch_norm(self.x, self.gamma, self.beta, None, None, self.epsilon, is_training=self.is_training)
 			self.update(self.moving_average, mean)
@@ -365,6 +425,8 @@ class batch_norm(Layer):
 			res, mean, var = tf.nn.fused_batch_norm(self.x, self.gamma, self.beta, self.moving_average, self.variance, self.epsilon, is_training=self.is_training)
 		if inp_dim_num==3:
 			res = tf.squeeze(res , axis=1)
+		elif inp_dim_num==5:
+			res = tf.reshape(res, inp_shape)
 		return res 
 
 class deconv2D(Layer):
@@ -411,6 +473,52 @@ class deconv2D(Layer):
 		if self.usebias:
 			res = tf.nn.bias_add(res, self.b)
 		return res 
+
+class deconv3D(Layer):
+	def __init__(self, size, outchn, x=None, stride=1, usebias=True, pad='SAME', name=None):
+		self.x = x
+		self.size = size 
+		self.outchn = outchn
+		self.name = name 
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+
+		super().__init__(name)
+
+	def _parse_args(self):
+		inp_size = self.x.get_shape().as_list()
+		inchannel = inp_size[-1]
+		if isinstance(self.size,list):
+			self.size = [self.size[0],self.size[1],self.size[2], self.outchn, inchannel]
+		else:
+			self.size = [self.size, self.size, self.size, self.outchn, inchannel]
+
+		if isinstance(self.stride, list):
+			if len(self.stride)==2:
+				self.stride = [1,self.stride[0],self.stride[1], self.stride[2],1]
+		elif isinstance(self.stride, int):
+			self.stride = [1, self.stride, self.stride, self.stride, 1]
+
+		# infer the output shape
+		if self.pad == 'SAME':
+			self.output_shape = [tf.shape(self.x)[0], tf.shape(self.x)[1]*self.stride[1], tf.shape(self.x)[2]*self.stride[2], tf.shape(self.x)[3]*self.stride[3], self.outchn]
+		else:
+			self.output_shape = [tf.shape(self.x)[0], tf.shape(self.x)[1]*self.stride[1]+self.size[0]-self.stride[1], tf.shape(self.x)[2]*self.stride[2]+self.size[1]-self.stride[2], tf.shape(self.x)[3]*self.stride[3]+self.size[2]-self.stride[3], self.outchn]
+
+	def _initialize(self):
+		self.W = weight_conv(self.size)
+		self._add_variable(self.W)
+		if self.usebias:
+			self.b = bias([self.outchn])
+			self._add_variable(self.b)
+
+	def _deploy(self):
+		res = tf.nn.conv3d_transpose(self.x, self.W, self.output_shape, self.stride, padding=self.pad)
+		if self.usebias:
+			res = tf.nn.bias_add(res, self.b)
+		return res 
+
 
 class flatten(Layer):
 	def __init__(self, x=None, name=None):
