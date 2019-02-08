@@ -2,6 +2,7 @@ import network
 import modeleag as M 
 import numpy as np 
 import tensorflow as tf 
+import os 
 
 from data_reader import *
 

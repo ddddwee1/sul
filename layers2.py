@@ -425,3 +425,11 @@ class flatten(Layer):
 			num *= k
 		res = tf.reshape(self.x, [-1, num])
 		return res 
+
+
+####### Functional layer #######
+@tf.custom_gradient
+def gradient_reverse(x):
+	def grad(dy):
+		return -dy
+	return x, grad

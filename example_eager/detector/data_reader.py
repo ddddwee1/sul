@@ -22,7 +22,7 @@ def load_data():
 	for f in glob.glob('./task1/train/img/*.*'):
 		f = f.replace('\\','/') # windows use \ instead of /
 		img = cv2.imread(f)
-		annot = load_annot(f.replace('.jpg','.txt'))
+		annot = load_annot(f.replace('.jpg','.txt').replace('/img/','/gt/'))
 		data.append([img, annot])
 	print('Data size:',len(data))
 	return data

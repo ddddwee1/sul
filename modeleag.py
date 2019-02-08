@@ -456,3 +456,13 @@ def image_transform(x, H, out_shape=None, interpolation='NEAREST'):
 			out_shape = shape[:2]
 	return tf.contrib.image.transform(x, H, interpolation=interpolation, output_shape=out_shape)
  
+def zip_grad(grads, vars):
+	assert len(grads)==len(vars)
+	grads_1 = []
+	vars_1 = []
+	for i in range(len(grads)):
+		if not grads[i] is None:
+			grads_1.append(grads[i])
+			vars_1.append(vars[i])
+	assert len(grads_1)!=0
+	return zip(grads_1, vars_1)
