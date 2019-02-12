@@ -1,5 +1,6 @@
 import cv2
 import numpy as np 
+import os 
 
 def extract_frames(fname,prefix,skip=1):
 	print('Extracting %s'%fname)
@@ -11,7 +12,7 @@ def extract_frames(fname,prefix,skip=1):
 		if not ret:
 			break
 		if cnt%skip==0:
-			imgname = prefix+'_%d.jpg'%cnt
+			imgname = prefix+'_%08d.jpg'%cnt
 			if not os.path.exists(imgname):
 				cv2.imwrite(imgname, frame)
 			imgnames.append(imgname)
