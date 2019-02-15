@@ -534,6 +534,63 @@ class flatten(Layer):
 		res = tf.reshape(self.x, [-1, num])
 		return res 
 
+class graphConvLayer(Layer):
+	# no x here. Will delete input x in the future version
+	def __init__(self, outsize, adj_mtx=None, adj_fn=None, values=None, usebias=True, name=None):
+		assert (adj_mtx is None) ^ (adj_fn is None), 'Assign either adj_mtx or adj_fn'
+		self.outsize = outsize
+		self.adj_mtx = adj_mtx
+		self.adj_fn = adj_fn
+		self.values = values
+		self.usebias = usebias
+		self.adj_mtx = adj_mtx
+		self.adj_fn = adj_fn
+		self.normalized = False
+
+		super().__init__(name)
+
+	def _initialize(self):
+		insize = self.x.get_shape().as_list()[-1]
+		if self.values is not None:
+			self.W = weight([insize, self.outsize], data=self.values[0])
+		else:
+			self.W = weight([insize, self.outsize])
+		self._add_variable(self.W)
+
+		if self.usebias:
+			if self.values is not None:
+				self.b = bias([self.outsize], value=self.values[1])
+			else:
+				self.b = bias([self.outsize])
+			self._add_variable(self.b)
+
+	def _normalize_adj_mtx(self, mtx):
+		S = tf.reduce_sum(mtx, axis=1)
+		S = tf.sqrt(S)
+		S = 1. / S
+		S = tf.diag(S)
+		I = tf.eye(tf.cast(S.shape[0], tf.int64))
+		A_ = (mtx + I) 
+		A_ = tf.matmul(S, A_)
+		A_ = tf.matmul(A_, S)
+		return tf.stop_gradient(A_)
+
+	def _deploy(self):
+		if self.adj_mtx is not None:
+			A = self.adj_mtx
+			if not self.normalized:
+				A = self._normalize_adj_mtx(A)
+				self.adj_mtx = A 
+				self.normalized = True
+		else:
+			A = self.adj_fn(self.x)
+			A = self._normalize_adj_mtx(A)
+
+		res = tf.matmul(A, self.x)
+		res = tf.matmul(res, self.W)
+		if self.usebias:
+			res = tf.nn.bias_add(res, self.b)
+		return res 
 
 ####### Functional layer #######
 @tf.custom_gradient

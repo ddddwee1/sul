@@ -235,6 +235,25 @@ class Dense(Model):
 			x = self.activation(x)
 		return x 
 
+class GraphConvLayer(Model):
+	def initialize(self, outsize, adj_mtx=None, adj_fn=None, usebias=True, activation=-1, batch_norm=False):
+		self.GCL = L.graphConvLayer(outsize, adj_mtx=adj_mtx, adj_fn=adj_fn, usebias=usebias)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+
+	def forward(self, x):
+		x = self.GCL(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			x = self.activation(x)
+		return x 
+
+
 flatten = L.flatten()
 maxPool = L.maxpoolLayer
 
