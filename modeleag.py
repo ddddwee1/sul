@@ -493,6 +493,8 @@ class DataReader():
 
 ######### short-cut functions #########
 
+gradient_reverse = L.gradient_reverse
+
 def pad(x, pad):
 	if isinstance(pad, list):
 		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [pad[2],pad[3]], [0,0]])
