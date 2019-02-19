@@ -88,7 +88,8 @@ class conv2D(Layer):
 			self.bias_data = None
 		else:
 			self.kernel_data = values[0]
-			self.bias_data = values[1]
+			if usebias:
+				self.bias_data = values[1]
 		self.dilation_rate = dilation_rate
 		self.weight_norm = weight_norm
 
@@ -139,7 +140,7 @@ class conv2D(Layer):
 				self.b = bias([self.outchn], value=self.bias_data)
 			else:
 				self.b = bias([self.outchn])
-		self._add_variable(self.b)
+			self._add_variable(self.b)
 		
 	def _deploy(self):
 		out = tf.nn.conv2d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
@@ -161,7 +162,8 @@ class conv3D(Layer):
 			self.bias_data = None
 		else:
 			self.kernel_data = values[0]
-			self.bias_data = values[1]
+			if self.usebias:
+				self.bias_data = values[1]
 		self.dilation_rate = dilation_rate
 		self.weight_norm = weight_norm
 
@@ -212,7 +214,7 @@ class conv3D(Layer):
 				self.b = bias([self.outchn], value=self.bias_data)
 			else:
 				self.b = bias([self.outchn])
-		self._add_variable(self.b)
+			self._add_variable(self.b)
 		
 	def _deploy(self):
 		out = tf.nn.conv3d(self.x,self.W,self.stride,self.pad,dilations=self.dilation_rate)
@@ -234,7 +236,8 @@ class conv1D(Layer):
 			self.bias_data = None
 		else:
 			self.kernel_data = values[0]
-			self.bias_data = values[1]
+			if self.usebias:
+				self.bias_data = values[1]
 		self.dilation_rate = dilation_rate
 		self.weight_norm = weight_norm
 
@@ -276,7 +279,7 @@ class conv1D(Layer):
 				self.b = bias([self.outchn], value=self.bias_data)
 			else:
 				self.b = bias([self.outchn])
-		self._add_variable(self.b)
+			self._add_variable(self.b)
 		
 	def _deploy(self):
 		self.x = tf.expand_dims(self.x, axis=1)
@@ -313,6 +316,34 @@ class maxpoolLayer(Layer):
 
 	def _deploy(self):
 		return tf.nn.max_pool(self.x, ksize=self.size, strides=self.stride, padding=self.pad)
+
+class avgpoolLayer(Layer):
+	def __init__(self,size,x=None,stride=None,name=None,pad='SAME'):
+		self.x = x 
+		self.name = name
+		self.size = size
+		self.stride = stride
+		self.pad = pad
+
+		super().__init__(name)
+
+	def _parse_args(self):
+		if isinstance(self.size, list):
+			if len(self.size)==2:
+				self.size = [1, self.size[0], self.size[1], 1]
+		elif isinstance(self.size, int):
+			self.size = [1, self.size, self.size, 1]
+
+		if not self.stride:
+			self.stride = self.size
+		elif isinstance(self.stride, list):
+			if len(self.stride)==2:
+				self.stride = [1,self.stride[0],self.stride[1],1]
+		elif isinstance(self.stride, int):
+			self.stride = [1, self.stride, self.stride, 1]
+
+	def _deploy(self):
+		return tf.nn.avg_pool(self.x, ksize=self.size, strides=self.stride, padding=self.pad)
 
 class activation(Layer):
 	def __init__(self, param, x=None, name=None, **kwarg):
@@ -475,7 +506,7 @@ class deconv2D(Layer):
 		return res 
 
 class deconv3D(Layer):
-	def __init__(self, size, outchn, x=None, stride=1, usebias=True, pad='SAME', name=None):
+	def __init__(self, size, outchn, x=None, stride=1, usebias=True, pad='SAME', name=None, values=None):
 		self.x = x
 		self.size = size 
 		self.outchn = outchn
@@ -483,6 +514,7 @@ class deconv3D(Layer):
 		self.stride = stride
 		self.pad = pad 
 		self.usebias = usebias
+		self.values = values
 
 		super().__init__(name)
 
@@ -507,10 +539,16 @@ class deconv3D(Layer):
 			self.output_shape = [tf.shape(self.x)[0], tf.shape(self.x)[1]*self.stride[1]+self.size[0]-self.stride[1], tf.shape(self.x)[2]*self.stride[2]+self.size[1]-self.stride[2], tf.shape(self.x)[3]*self.stride[3]+self.size[2]-self.stride[3], self.outchn]
 
 	def _initialize(self):
-		self.W = weight_conv(self.size)
+		if self.values is not None:
+			self.W = weight_conv(self.size, self.values[0])
+		else:
+			self.W = weight_conv(self.size)
 		self._add_variable(self.W)
 		if self.usebias:
-			self.b = bias([self.outchn])
+			if self.values is not None:
+				self.b = bias([self.outchn], self.values[1])
+			else:
+				self.b = bias([self.outchn])
 			self._add_variable(self.b)
 
 	def _deploy(self):
@@ -592,9 +630,104 @@ class graphConvLayer(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
+
+################ TF RESIZE GOT PROBLEM!!! #############
+
+def upsample_kernel(size):
+	factor = (size +1)//2
+	if size%2==1:
+		center = factor - 1
+	else:
+		center = factor - 0.5
+	og = np.ogrid[:size, :size]
+	return (1 - abs(og[0]-center)/factor) * (1-abs(og[1]-center)/factor)
+
+def bilinear_upsample(x, factor):
+	x = tf.pad(x, [[0,0],[1,1],[1,1],[0,0]], mode='symmetric')
+	filter_size = 2*factor - factor%2
+	len_dim = len(x.get_shape().as_list())
+	if len_dim==3:
+		x = tf.expand_dims(x, axis=0)
+	shape = x.get_shape().as_list()
+	# print('abcbc',shape)
+	num_featuremap = shape[-1]
+	assert len_dim in [4,3], 'Only NHWC or HWC is supported'
+	
+	weights = np.zeros([filter_size, filter_size, num_featuremap, num_featuremap], dtype=np.float32)
+	kernel = upsample_kernel(filter_size)
+	for i in range(num_featuremap):
+		weights[:,:,i,i] = kernel 
+	res = tf.nn.conv2d_transpose(x, weights, output_shape=[shape[0], shape[1]*factor, shape[2]*factor, shape[3]], strides=[1,factor,factor,1])
+	res = res[:, factor:-factor, factor:-factor, :]
+
+	if len(shape)==3:
+		res = res[0]
+	return res 
+
+def upsample_kernel_1d(size):
+	factor = (size + 1)//2
+	if size%2==1:
+		center = factor - 1
+	else:
+		center = factor - 0.5
+	og = np.ogrid[:size]
+	og = og[None, :]
+	kernel = 1 - abs(og - center)/factor
+	return kernel
+
+def bilinear_upsample_1d(x, factor):
+	# input 4d tensor, expand based on the width 
+	filter_size = 2*factor - factor%2
+	x = tf.pad(x, [[0,0],[0,0],[1,1],[0,0]], mode='symmetric')
+	len_dim = len(x.get_shape().as_list())
+	if len_dim==3:
+		x = tf.expand_dims(x, axis=0)
+	shape = x.get_shape().as_list()
+	num_featuremap = shape[-1]
+	assert len_dim in [4,3], 'Only NHWC or HWC is supported'
+	
+	weights = np.zeros([1, filter_size, num_featuremap, num_featuremap], dtype=np.float32)
+	kernel = upsample_kernel_1d(filter_size)
+	for i in range(num_featuremap):
+		weights[:,:,i,i] = kernel 
+	res = tf.nn.conv2d_transpose(x, weights, output_shape=[shape[0], shape[1], shape[2]*factor, shape[3]], strides=[1,1,factor,1])
+	res = res[:, :, factor:-factor, :]
+
+	if len(len_dim)==3:
+		res = res[0]
+	return res 
+
+def upsample_kernel_3d(size):
+	factor = (size + 1)//2
+	if size%2==1:
+		center = factor - 1
+	else:
+		center = factor - 0.5
+	og = np.ogrid[:size, :size, :size]
+	kernel = (1 - abs(og[0]-center)/factor) * (1-abs(og[1]-center)/factor) * (1-abs(og[2]-center)/factor)
+	return kernel
+
+def bilinear_upsample_3d(x, factor):
+	# input 4d tensor, expand based on the width 
+	filter_size = 2*factor - factor%2
+	x = tf.pad(x, [[0,0],[1,1],[1,1],[1,1],[0,0]], mode='symmetric')
+
+	shape = x.get_shape().as_list()
+	num_featuremap = shape[-1]
+	assert len(shape)==5, 'Only NHWC or HWC is supported'
+	
+	weights = np.zeros([filter_size, filter_size, filter_size, num_featuremap, num_featuremap], dtype=np.float32)
+	kernel = upsample_kernel_3d(filter_size)
+	for i in range(num_featuremap):
+		weights[:,:,:,i,i] = kernel 
+	res = tf.nn.conv3d_transpose(x, weights, output_shape=[shape[0], shape[1]*factor, shape[2]*factor, shape[3]*factor, shape[4]], strides=[1,factor, factor, factor,1])
+	res = res[:, factor:-factor, factor:-factor, factor:-factor, :]
+	return res 
+
 ####### Functional layer #######
 @tf.custom_gradient
 def gradient_reverse(x):
 	def grad(dy):
 		return -dy
 	return x, grad
+

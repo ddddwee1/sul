@@ -256,6 +256,7 @@ class GraphConvLayer(Model):
 
 flatten = L.flatten()
 maxPool = L.maxpoolLayer
+avgPool = L.avgpoolLayer
 
 ########### higher wrapped block ##########
 
@@ -286,6 +287,14 @@ class ResBlock(Model):
 
 		return branch + short
 
+class Sequential(Model):
+	def initialize(self, modules):
+		self.modules = modules
+
+	def forward(self, x):
+		for m in self.modules:
+			x = m(x)
+		return x
 
 ########### saver ##########
 class Saver():
@@ -502,6 +511,13 @@ def pad(x, pad):
 		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[0,0]])
 	return x 
 
+def pad3D(x, pad):
+	if isinstance(pad, list):
+		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [pad[2],pad[3]], [pad[4], pad[5]], [0,0]])
+	else:
+		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[pad,pad],[0,0]])
+	return x 
+
 def image_transform(x, H, out_shape=None, interpolation='NEAREST'):
 	# Will produce error if not specify 'output_shape' in eager mode
 	shape = x.get_shape().as_list()
@@ -522,3 +538,4 @@ def zip_grad(grads, vars):
 			vars_1.append(vars[i])
 	assert len(grads_1)!=0
 	return zip(grads_1, vars_1)
+
