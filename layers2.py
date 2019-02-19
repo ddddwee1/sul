@@ -436,6 +436,8 @@ class batch_norm(Layer):
 
 			self.gamma = bias([shape],name='gamma',value=self.values[2],trainable=True)
 			self.beta = bias([shape],name='beta',value=self.values[3],trainable=True)
+		self._add_variable(self.beta)
+		self._add_variable(self.gamma)
 
 	def update(self,variable,value):
 		delta = (variable - value) * self.decay
