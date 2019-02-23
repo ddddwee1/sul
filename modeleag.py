@@ -1,3 +1,6 @@
+# Rework of model.py
+# https://github.com/ddddwee1/sul
+# This wrap-up is targeted for better touching low-level implementations 
 import layers2 as L 
 import tensorflow as tf 
 config = tf.ConfigProto()
@@ -112,14 +115,21 @@ class Model(tf.contrib.checkpoint.Checkpointable):
 
 	def set_bn_epsilon(self, epsilon):
 		atrs = dir(self)
+		# print(atrs)
 		for i in atrs:
 			if i[0] == '_':
 				continue
 			obj = getattr(self, i)
-			if isinstance(obj, Model):
-				obj.set_bn_epsilon(epsilon)
-			if isinstance(obj, L.batch_norm):
-				obj.epsilon = epsilon
+			self._set_bn_epsilon_recursive(obj, epsilon)
+
+	def _set_bn_epsilon_recursive(self, obj, epsilon):
+		if isinstance(obj, list):
+			for sub_obj in obj:
+				self._set_bn_training_recursive(sub_obj, epsilon)
+		if isinstance(obj, Model) and obj!=self:
+			obj.set_bn_training(epsilon)
+		if isinstance(obj, L.batch_norm):
+			obj.epsilon = epsilon
 
 	def __call__(self, x, *args, **kwargs):
 		x = tf.convert_to_tensor(x, preferred_dtype=tf.float32)
