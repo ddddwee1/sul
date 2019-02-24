@@ -217,6 +217,24 @@ class DeconvLayer3D(Model):
 			x = self.activation(x)
 		return x 
 
+class DeconvLayer1D(Model):
+	def initialize(self, size, outchn, activation=-1, stride=1, usebias=True, pad='SAME', batch_norm=False):
+		self.deconv = L.deconv1D(size,outchn,stride=stride,usebias=usebias,pad=pad, name=None)
+		self.batch_norm = batch_norm
+		self.activation_ = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if activation!=-1:
+			self.activation = L.activation(activation)
+
+	def forward(self,x):
+		x = self.deconv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation_!=-1:
+			x = self.activation(x)
+		return x 
+
 class Dense(Model):
 	def initialize(self, outsize, usebias=True, batch_norm=False, activation=-1):
 		self.fclayer = L.fcLayer(outsize,usebias=usebias)
@@ -269,7 +287,7 @@ class ResBlock(Model):
 		self.l1 = ConvLayer(1, outchn//ratio, activation=PARAM_RELU, batch_norm=True)
 		self.l2 = ConvLayer(3, outchn//ratio, activation=PARAM_RELU, batch_norm=True, stride=stride)
 		self.l3 = ConvLayer(1, outchn)
-		self.shortcut_conv = ConvLayer(1, outchn, activation=PARAM_RELU, stride=stride)
+		self.shortcut_conv = ConvLayer(1, outchn, stride=stride)
 		self.shortcut_pool = L.maxpoolLayer(stride)
 
 	def forward(self, x):

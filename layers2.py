@@ -559,6 +559,45 @@ class deconv3D(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
+class deconv1D(Layer):
+	def __init__(self,size,outchn,x=None,stride=1,usebias=True,pad='SAME',name=None):
+		self.x = x
+		self.size = size 
+		self.outchn = outchn
+		self.name = name 
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+
+		super().__init__(name)
+
+	def _parse_args(self):
+		inp_size = self.x.get_shape().as_list()
+		inchannel = inp_size[-1]
+		self.size = [1, self.size, self.outchn, inchannel]
+
+		self.stride = [1, 1, self.stride, 1]
+
+		# infer the output shape
+		if self.pad == 'SAME':
+			self.output_shape = [tf.shape(self.x)[0], 1, tf.shape(self.x)[1]*self.stride[2], self.outchn]
+		else:
+			self.output_shape = [tf.shape(self.x)[0], 1, tf.shape(self.x)[1]*self.stride[2]+self.size[1]-self.stride[2], self.outchn]
+
+	def _initialize(self):
+		self.W = weight_conv(self.size)
+		self._add_variable(self.W)
+		if self.usebias:
+			self.b = bias([self.outchn])
+			self._add_variable(self.b)
+
+	def _deploy(self):
+		self.x = tf.expand_dims(self.x, axis=1)
+		res = tf.nn.conv2d_transpose(self.x, self.W, self.output_shape, self.stride, padding=self.pad)
+		if self.usebias:
+			res = tf.nn.bias_add(res, self.b)
+		res = tf.squeeze(res, axis=1)
+		return res 
 
 class flatten(Layer):
 	def __init__(self, x=None, name=None):
