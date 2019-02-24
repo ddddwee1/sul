@@ -1,3 +1,5 @@
+# Rework of layers.py
+# https://github.com/ddddwee1/sul
 import tensorflow as tf 
 import numpy as np 
 
