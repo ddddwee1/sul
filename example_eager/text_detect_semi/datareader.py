@@ -8,6 +8,7 @@ import random
 train_img_path = './task1/train/img/'
 train_lab_path = './task1/train/gt/'
 img_fn='./task1/train/img/'
+grid_size = 32
 
 def get_image(img_fn):
 
