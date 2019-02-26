@@ -17,7 +17,9 @@ class Module(M.Model):
 
 	def forward(self, img, grid=16):
 		# fix batch size at 1
+		assert img.get_shape().as_list()[0]==1,'Batchsize more than 1 is not implemented yet'
 		x = self.rpn_net(img)
+		maps = x
 		x = x[0]
 		conf, xy, wh = x[:,:,0:1], x[:,:,1:3], x[:,:,3:]
 		wh = tf.exp(wh) / 2.
@@ -45,10 +47,9 @@ class Module(M.Model):
 					corner_y1 = corner_y + wh[i,j,1]*2
 					coords.append([corner_x.numpy(), corner_y.numpy(), corner_x1.numpy(), corner_y1.numpy()])
 
-
 		cls_result = self.cls_net(patches)
 
-		return cls_result, coords
+		return maps, cls_result, coords
 		# return patches
 
 	def get_patches(self, img, grid=16):
@@ -76,22 +77,67 @@ class Module(M.Model):
 					patches.append(out)
 		return patches
 
-def loss_func(img, model):
-	with tf.GradientTape() as tape:
-		cls_result = model([img])
-		cls_result = tf.sigmoid(cls_result)
-		ls = tf.reduce_mean(tf.square(cls_result - 1.))
-	return ls, tape
-
 def computeIOU(box1, box2):
-	x1, y1, x2, y2 = box1
-	x3, y3, x4, y4 = box2 
+	x1, y1,_, _, x2, y2,_,_ = box1
+	x3, y3,_, _, x4, y4,_,_ = box2 
 	dx = max(0, min(x2,x4) - max(x1,x3))
 	dy = max(0, min(y2,y4) - max(y1,y3))
 	inter = dx*dy 
 	union = (x4 - x3) * (y4 - y3) + (x2 - x1) * (y2 - y1) - inter
 	iou = inter / (union + 1)
 	return iou 
+
+def post_process(bundle):
+	res = list(zip(*bundle))
+	res = [np.float32(i) for i in res]
+	return res 
+
+def get_ious(gt_boxes, pred_boxes):
+	res = []
+	for p in pred_boxes:
+		ious = []
+		for g in gt_boxes:
+			iou = computeIOU(p, g)
+			ious.append(iou)
+		res.append(np.array(ious).max())
+	res = np.float32(res)
+	return res 
+
+def sup_loss(img, network, conf_map, geo_map):
+	gt_boxes = datareader.map_to_box(conf_map, geo_map, 0.0)
+
+	with tf.GradientTape() as tape:
+		maps, cls_result, coords = network(img)
+		conf_pred = maps[:,:,:,0:1]
+		geo_pred = maps[:,:,:,1:]
+		
+		conf_loss = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(logits=conf_pred, labels=conf_map) * tf.stop_gradient(tf.abs(conf_pred - conf_map)) )
+		geo_loss = tf.reduce_sum( tf.square(geo_map - geo_pred) * conf_map ) / (tf.reduce_sum(conf_map) + 1e-6)
+
+		ious = get_ious(gt_boxes, coords)
+		ious2 = ious.copy() # I'm lazy
+
+		# binary loss
+		ious[ious<0.5] = 0
+		ious[ious>0] = 1
+		cls_loss = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(logits=cls_result, labels=ious) * tf.stop_gradient(tf.abs(cls_result - ious))) # balance weight
+		# continuous loss (ce)
+		cls_loss = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(logits=cls_result, labels=ious) )
+		# continuous loss (mse)
+		cls_loss = tf.reduce_mean( tf.square(tf.sigmoid(cls_result) - ious) )
+
+		# RPN traceback
+		# eliminate non-overlapped samples. Large DOF will cause non-convergence
+		ious2[ious2<0.1] = 0.
+		ious2[ious2>0.] = 1.
+		cls_traceback = tf.reduce_sum(tf.square(tf.sigmoid(cls_result) - tf.ones_like(cls_result)) * ious2 ) / ious2.sum()
+	return [conf_loss, geo_loss, cls_loss, cls_traceback], tape
+
+def applyGrad(mod, losses, optim, tape):
+	variables = [mod.rpn_net.variables, mod.rpn_net.variables, mod.cls_net.variables, mod.rpn_net.variables]
+	grads = tape.gradient(losses, variables)
+	for g,v in zip(grads, variables):
+		optim.apply_gradients(zip(g,v))
 
 
 if __name__=='__main__':
@@ -101,28 +147,25 @@ if __name__=='__main__':
 
 	saver = M.Saver(mod.rpn_net)
 	saver.restore('./model_rpn/')
+	del saver 
 
-	img = cv2.imread('./img_180.jpg')
+	saver = M.Saver(mod, optim)
+	saver.restore('./model/')
 
-	####### magic ######
-	h,w,_ = img.shape
-	new_h = (h//32+1)*32
-	new_w = (w//32+1)*32
-	img = cv2.resize(img, dsize=(new_w, new_h))
-	### end of magic ###
+	loader = M.DataReader(data=datareader.load_dataset(), fn = datareader.processe_bundle,\
+		batch_size=1, shuffle=True, random_sample=True, pose_fn=post_process, processes=1)
 
-	img = np.float32(img)
-
-	patches = mod.get_patches([img])
-	print(len(patches))
-	cnt = 0
-	for i in patches:
-		cnt +=1
-		print(i.shape)
-		i = np.uint8(i)
-		cv2.imwrite('./result/%d.jpg'%cnt, i )
-
-	# ls, tape = loss_func(img, mod)
-	# grad = tape.gradient(ls, mod.variables)
-
-	# print(grad[0])
+	MAXITER = 20001
+	for i in range(MAXITER):
+		train_img, conf_map, geo_map = loader.get_next_batch()
+		losses , tape = sup_loss(train_img, mod, conf_map, geo_map)
+		applyGrad(mod, losses, optim, tape)
+		print('ITER:%d\tConfLoss:%.4f\tGeoLoss:%.4f\tClsLoss:%.4f\tTBLoss:%.4f'%(i,losses[0].numpy(),losses[1].numpy(),losses[2].numpy(),losses[3].numpy()))
+		if i%2000==0 and i>0:
+			saver.save('./model/model.ckpt')
+		
+'''
+TO-DO:
+1. conf consistency (after testing)
+2. EMA model
+'''
