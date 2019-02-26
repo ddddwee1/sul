@@ -9,6 +9,7 @@ import network_rpn
 import datareader
 
 import cv2 
+import random 
 
 class Module(M.Model):
 	def initialize(self):
@@ -131,10 +132,40 @@ def sup_loss(img, network, conf_map, geo_map):
 		ious2[ious2<0.1] = 0.
 		ious2[ious2>0.] = 1.
 		cls_traceback = tf.reduce_sum(tf.square(tf.sigmoid(cls_result) - tf.ones_like(cls_result)) * ious2 ) / ious2.sum()
+
 	return [conf_loss, geo_loss, cls_loss, cls_traceback], tape
 
-def applyGrad(mod, losses, optim, tape):
+def parse_conf_map(conf_map, cls_result):
+	confs = []
+	shape = conf_map.get_shape().as_list()
+	for i in range(shape[0]):
+		for j in range(shape[1]):
+			confs.append(conf_map[i,j,0])
+	return confs 
+
+def unsup_loss(img, network):
+	with tf.GradientTape() as tape:
+		maps, cls_result, coords = network(img)
+		confs = parse_conf_map(maps[0,:,:,0:1])
+		
+		# confidence consistency
+		conf_consist = tf.reduce_mean([tf.square(confs[i] - tf.stop_gradient(cls_result[i])) for i in range(len(confs))])
+
+		# RPN traceback
+		scores = [i.numpy() for i in cls_result]
+		scores[scores<0.5] = 0
+		scores[scores>0] = 1
+		cls_traceback = tf.reduce_sum(tf.square(tf.sigmoid(cls_result) - tf.ones_like(cls_result)) * scores ) / scores.sum()
+	return [conf_consist, cls_traceback], tape
+
+def applyGrad_sup(mod, losses, optim, tape):
 	variables = [mod.rpn_net.variables, mod.rpn_net.variables, mod.cls_net.variables, mod.rpn_net.variables]
+	grads = tape.gradient(losses, variables)
+	for g,v in zip(grads, variables):
+		optim.apply_gradients(zip(g,v))
+
+def applyGrad_unsup(mod, losses, optim, tape):
+	variables = [mod.rpn_net.variables, mod.rpn_net.variables]
 	grads = tape.gradient(losses, variables)
 	for g,v in zip(grads, variables):
 		optim.apply_gradients(zip(g,v))
@@ -155,17 +186,31 @@ if __name__=='__main__':
 	loader = M.DataReader(data=datareader.load_dataset(), fn = datareader.processe_bundle,\
 		batch_size=1, shuffle=True, random_sample=True, pose_fn=post_process, processes=1)
 
-	MAXITER = 20001
+	unlabelled_imgs = load_unlabelled_data()
+
+	# start supervised training
+	MAXITER = 50001
 	for i in range(MAXITER):
 		train_img, conf_map, geo_map = loader.get_next_batch()
 		losses , tape = sup_loss(train_img, mod, conf_map, geo_map)
-		applyGrad(mod, losses, optim, tape)
+		applyGrad_sup(mod, losses, optim, tape)
 		print('ITER:%d\tConfLoss:%.4f\tGeoLoss:%.4f\tClsLoss:%.4f\tTBLoss:%.4f'%(i,losses[0].numpy(),losses[1].numpy(),losses[2].numpy(),losses[3].numpy()))
 		if i%2000==0 and i>0:
 			saver.save('./model/model.ckpt')
 		
+	# start unsupervised training
+	MAXITER = 50001
+	for i in range(MAXITER):
+		train_img, conf_map, geo_map = loader.get_next_batch()
+		losses , tape = sup_loss(train_img, mod, conf_map, geo_map)
+		applyGrad_sup(mod, losses, optim, tape)
+		train_img = random.sample(unlabelled_imgs, 1)
+		train_img = np.float32(train_img)
+		losses_unsup, tape = unsup_loss(train_img, mod)
+		applyGrad_unsup(mod, losses, optim, tape)
+		print( 'ITER:%d\tConfLoss:%.4f\tGeoLoss:%.4f\tClsLoss:%.4f\tTBLoss:%.4f\tConstLoss:%.4f\tTBLoss_unsup:%.4f'%(i,losses[0].numpy(),losses[1].numpy(),losses[2].numpy(),losses[3].numpy(),losses_unsup[0].numpy(), losses_unsup[1].numpy()) )
 '''
 TO-DO:
-1. conf consistency (after testing)
-2. EMA model
+1. EMA model
+2. Psudo label pool
 '''
