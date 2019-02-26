@@ -1,14 +1,12 @@
 # SUL
 Self-use layers based on Tensorflow. Samples can be viewed in ./sample/
 
-I am really looking forward to tf2.0, but still waiting. Even the BFV and Artifact has come, there is no tf2.0. I thought they will release in the end of 2018, but it is end of Jan. 2019 now.
-
-I'm waiting for totalwar 3kingdoms now. Dont be late anymore, PLS!
+Still no TF2.0 :(
 
 #### SUL2.0
 ##### Introduction
 
-Now the main model and layer is replaced by SUL2. SUL1 is moved into other folder. 
+Now the main model and layer is replaced by SUL2. SUL1 is moved into './SUL1'. 
 
 ##### Features
 
