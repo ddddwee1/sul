@@ -79,10 +79,11 @@ def plot(img, lab, color):
         x1, y1, x2, y2 = lab[0], lab[1], lab[4], lab[5]
         cv2.rectangle(img_pro, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
     # plt.ion()
-    plt.imshow(img_pro)
-    plt.show()
+    # plt.imshow(img_pro)
+    # plt.show()
     # plt.pause(5)
     # plt.close()
+    return img_pro
 
 
 def random_scale(img, lab):

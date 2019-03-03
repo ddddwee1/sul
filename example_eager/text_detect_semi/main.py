@@ -153,7 +153,7 @@ def unsup_loss(img, network):
 		confs = parse_conf_map(confs)
 		
 		# confidence consistency
-		conf_consist = [tf.square(confs[i] - tf.stop_gradient(cls_result[i])) for i in range(len(confs))]
+		conf_consist = [tf.square(tf.sigmoid(confs[i]) - tf.stop_gradient(tf.sigmoid(cls_result[i]))) for i in range(len(confs))]
 		conf_consist = sum(conf_consist) / len(conf_consist)
 
 		# RPN traceback
@@ -219,6 +219,12 @@ if __name__=='__main__':
 		losses_unsup, tape = unsup_loss(train_img, mod)
 		applyGrad_unsup(mod, losses_unsup, optim, tape)
 		print( 'ITER:%d\tConfLoss:%.4f\tGeoLoss:%.4f\tClsLoss:%.4f\tTBLoss:%.4f\tConstLoss:%.4f\tTBLoss_unsup:%.4f'%(i,losses[0].numpy(),losses[1].numpy(),losses[2].numpy(),losses[3].numpy(),losses_unsup[0].numpy(), losses_unsup[1].numpy()) )
+		
+		if i%100==0:
+			maps = mod.rpn_net(train_img)
+			text_polys = datareader.map_to_box(maps[0,:,:,0:1], maps[0,:,:,1:], 0.3)
+			res_img = datareader.plot(train_img[0], text_polys, (255,255,0))
+			cv2.imwrite('./res/%d.jpg'%i, res_img)
 		if i%2000==0 and i>0:
 			saver.save('./model/model.ckpt')
 
