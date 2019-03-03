@@ -38,7 +38,7 @@ def load_annoataion(p):
     text_tags = []
     if not os.path.exists(p):
         return np.array(text_polys, dtype=np.float32)
-    with open(p, 'r') as f:
+    with open(p, 'r', encoding='utf8') as f:
         reader = csv.reader(f)
         for line in reader:
             label = line[-1]
@@ -269,7 +269,7 @@ def data_reader(img_fn):
     files = get_image(img_fn)
     result = []
     for file in files:
-        txt_fn = file.replace('/task1/train/img/', '/new_gt_50/').replace('.jpg', '.txt')
+        txt_fn = file.replace('/img/', '/gt/').replace('.jpg', '.txt')
         text_polys, text_tags = load_annoataion(txt_fn)
         img = cv2.imread(file)
         h,w,_ = img.shape
@@ -315,6 +315,7 @@ def annoataion_to_grid(img,text_polys, grid_num):
 
 def map_to_box(conf_map, geo_map, thresh):
 
+    # print(conf_map.shape)
     [y_map, x_map, _] = np.where(conf_map > thresh)
     polys = []
     for i in range(len(x_map)):

@@ -17,7 +17,7 @@ class network(M.Model):
 
         self.fc1 = M.Dense(100, activation=M.PARAM_RELU)
         self.fc2 = M.Dense(500, activation=M.PARAM_RELU)
-        self.fc3 = M.Dense(2)
+        self.fc3 = M.Dense(1)
 
     def forward(self, x):
         x = self.c1(x)
