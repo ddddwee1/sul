@@ -1,7 +1,9 @@
 # SUL
 Self-use layers based on Tensorflow. Samples can be viewed in ./sample/
 
-Still no TF2.0 :(
+TF2.0 IS COMING!!!!!!!!!!!!!!
+
+I will update the model&layers several days later. 
 
 #### SUL2.0
 ##### Introduction
