@@ -3,17 +3,20 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np 
 
 class Plotter3D():
-	def __init__(self, usebuffer=False):
+	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on'):
 		fig = plt.figure()
 		self.ax = fig.add_subplot(111, projection='3d')
+		self.ax.view_init(elev=elev, azim=azim)
+		self.ax.axis(axis)
 		self.lines = []
 		self.lines_buff = []
 		self.line_pos = 0
 		self.usebuffer = usebuffer
 		self.fig = fig 
 
-	def show(self):
-		plt.ion()
+	def show(self, ion=True):
+		if ion:
+			plt.ion()
 		plt.show()
 
 	def clear(self):
