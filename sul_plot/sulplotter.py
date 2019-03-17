@@ -7,7 +7,11 @@ class Plotter3D():
 		fig = plt.figure()
 		self.ax = fig.add_subplot(111, projection='3d')
 		self.ax.view_init(elev=elev, azim=azim)
-		self.ax.axis(axis)
+		# self.ax.axis(axis)
+		if axis=='off':
+			self.ax.set_xticklabels([])
+			self.ax.set_yticklabels([])
+			self.ax.set_zticklabels([])
 		self.lines = []
 		self.lines_buff = []
 		self.line_pos = 0
