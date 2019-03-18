@@ -5,6 +5,8 @@ TF2.0 IS COMING!!!!!!!!!!!!!!
 
 I will update the model&layers several days later. 
 
+Wait, wait... It's only alpha version
+
 #### SUL2.0
 ##### Introduction
 
