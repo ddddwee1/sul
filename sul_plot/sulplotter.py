@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np 
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class Plotter3D():
-	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on'):
+	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on', axis_tick='on'):
 		fig = plt.figure()
 		self.ax = fig.add_subplot(111, projection='3d')
 		self.ax.view_init(elev=elev, azim=azim)
-		# self.ax.axis(axis)
+		self.ax.axis(axis)
 		if axis=='off':
 			self.ax.set_xticklabels([])
 			self.ax.set_yticklabels([])
@@ -70,3 +71,51 @@ class Plotter3D():
 
 		if require_img:
 			return image
+
+class Surface3D():
+	def __init__(self, elev=None, azim=None, axis='on', axis_tick='on'):
+		fig = plt.figure()
+		self.ax = fig.add_subplot(111, projection='3d')
+		self.ax.view_init(elev=elev, azim=azim)
+		self.ax.axis(axis)
+		if axis=='off':
+			self.ax.set_xticklabels([])
+			self.ax.set_yticklabels([])
+			self.ax.set_zticklabels([])
+
+	def show(self, ion=True):
+		if ion:
+			plt.ion()
+		plt.show()
+
+	def plot(self, X,Y,Z, lims=None, **kwargs):
+		X = np.float32(X)
+		Y = np.float32(Y)
+		Z = np.float32(Z)
+		if lims is not None:
+			self.ax.set_xlim(lims[0])
+			self.ax.set_ylim(lims[1])
+			self.ax.set_zlim(lims[2])
+		self.ax.clear()
+		self.surf = self.ax.plot_surface(X,Y,Z, **kwargs)
+		plt.pause(0.0001)
+
+	def add_locator(self, num):
+		self.ax.zaxis.set_major_locator(LinearLocator(num))
+
+	def add_colorbar(self, **kwargs):
+		self.ax.colorbar(self.surf, **kwargs)
+	
+	def set_label(self, labels):
+		self.ax.set_xlabel(labels[0])
+		self.ax.set_ylabel(labels[1])
+		self.ax.set_zlabel(labels[2])
+
+	def interpolate(self, X,Y, X_target, Y_target, values):
+		if len(X.shape)==1:
+			X,Y = np.meshgrid(X,Y)
+
+		coord = np.stack([X,Y], axis=-1).reshape([-1,2])
+		values = values.reshape([-1])
+		res = griddata(coord, values, (X_target, Y_target), method='cubic')
+		return res 
