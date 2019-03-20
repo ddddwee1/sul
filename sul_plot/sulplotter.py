@@ -92,11 +92,12 @@ class Surface3D():
 		X = np.float32(X)
 		Y = np.float32(Y)
 		Z = np.float32(Z)
+		self.ax.clear()
 		if lims is not None:
 			self.ax.set_xlim(lims[0])
 			self.ax.set_ylim(lims[1])
 			self.ax.set_zlim(lims[2])
-		self.ax.clear()
+		
 		self.surf = self.ax.plot_surface(X,Y,Z, **kwargs)
 		plt.pause(0.0001)
 
