@@ -4,12 +4,19 @@ import numpy as np
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class Plotter3D():
-	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on', axis_tick='on'):
+	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on', axis_tick='on', no_margin=False):
 		fig = plt.figure()
 		self.ax = fig.add_subplot(111, projection='3d')
+
+		if no_margin:
+			# axis = 'off'
+			plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+			plt.margins(0,0,0)
+			# self.ax.xaxis.set_major_locator(plt.NullLocator())
+			# self.ax.yaxis.set_major_locator(plt.NullLocator())
 		self.ax.view_init(elev=elev, azim=azim)
 		self.ax.axis(axis)
-		if axis=='off':
+		if axis_tick=='off':
 			self.ax.set_xticklabels([])
 			self.ax.set_yticklabels([])
 			self.ax.set_zticklabels([])
@@ -51,11 +58,13 @@ class Plotter3D():
 		# self.fig.canvas.draw()
 		# much faster
 		try:
+			self.ax.set_proj_type('persp')
 			self.ax.draw_artist(self.ax.patch)
 			for line in self.lines:
 				self.ax.draw_artist(line)
 			self.fig.canvas.update()
 		except:
+			self.ax.set_proj_type('persp')
 			self.fig.canvas.draw()
 
 		if require_img:
@@ -92,12 +101,11 @@ class Surface3D():
 		X = np.float32(X)
 		Y = np.float32(Y)
 		Z = np.float32(Z)
-		self.ax.clear()
 		if lims is not None:
 			self.ax.set_xlim(lims[0])
 			self.ax.set_ylim(lims[1])
 			self.ax.set_zlim(lims[2])
-		
+		self.ax.clear()
 		self.surf = self.ax.plot_surface(X,Y,Z, **kwargs)
 		plt.pause(0.0001)
 
@@ -120,3 +128,76 @@ class Surface3D():
 		values = values.reshape([-1])
 		res = griddata(coord, values, (X_target, Y_target), method='cubic')
 		return res 
+
+class Plotter2D():
+	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on', axis_tick='on', no_margin=False):
+		fig = plt.figure()
+		plt.tight_layout()
+		self.ax = fig.add_subplot(111)
+		if no_margin:
+			axis = 'off'
+			plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+			plt.margins(0,0)
+			self.ax.xaxis.set_major_locator(plt.NullLocator())
+			self.ax.yaxis.set_major_locator(plt.NullLocator())
+		self.ax.axis(axis)
+		if axis=='off':
+			self.ax.set_xticklabels([])
+			self.ax.set_yticklabels([])
+		self.lines = []
+		self.lines_buff = []
+		self.line_pos = 0
+		self.usebuffer = usebuffer
+		self.fig = fig 
+
+	def show(self, ion=True):
+		if ion:
+			plt.ion()
+		plt.show()
+
+	def clear(self):
+		self.ax.clear()
+
+	def plot(self, xs,ys, lims=None, **kwargs):
+		if lims is not None:
+			self.ax.set_xlim(lims[0])
+			self.ax.set_ylim(lims[1])
+
+		if (len(self.lines)==0) or (not self.usebuffer):
+			a = self.ax.plot(xs, ys, **kwargs)
+			self.lines_buff.append(a)
+		else:
+			line = self.lines[self.line_pos][0]
+			line.set_data(xs,ys)
+			self.line_pos += 1
+		
+	def update(self, require_img=False):
+		# slowest 
+		# plt.pause(0.0001)
+		# faster
+		# self.fig.canvas.draw()
+		# much faster
+		try:
+			self.ax.draw_artist(self.ax.patch)
+			for line in self.lines:
+				self.ax.draw_artist(line)
+			self.fig.canvas.update()
+		except:
+			self.fig.canvas.draw()
+
+		if require_img:
+			# image = np.fromstring(self.fig.canvas.tostring_rgb(), dtype='uint8')
+			s, (width, height) = self.fig.canvas.print_to_buffer()
+			image = np.fromstring(s, np.uint8).reshape((height, width, 4))
+
+		self.fig.canvas.flush_events()
+		if len(self.lines)==0:
+			self.lines = self.lines_buff
+			self.lines_buff = []
+		self.line_pos = 0
+
+		if require_img:
+			return image
+
+	def imshow(self, img, **kwargs):
+		self.ax.imshow(img, **kwargs)
