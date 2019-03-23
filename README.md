@@ -3,9 +3,7 @@ Self-use layers based on Tensorflow. Samples can be viewed in ./sample/
 
 TF2.0 IS COMING!!!!!!!!!!!!!!
 
-I will update the model&layers several days later. 
-
-Wait, wait... It's only alpha version
+TF2.0 IS STILL IN PREVIEW VERSION. ANNOYING...
 
 #### SUL2.0
 ##### Introduction
