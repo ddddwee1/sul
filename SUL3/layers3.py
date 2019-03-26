@@ -136,6 +136,160 @@ class conv1D(Layer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
+class deconv1D(Layer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+		super(conv1D, self).__init__()
+		self.size = size
+		self.outchn = outchn
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+		self.values = values
+		self.dilation_rate = dilation_rate
+
+	def _parse_args(self, input_shape):
+		# set size
+		inchannel = input_shape[-1]
+		self.size = [self.size, inchannel, self.outchn]
+		# set stride
+		self.stride = [1, self.stride, 1]
+		# set dilation
+		self.dilation_rate = [1,self.dilation_rate,1]
+		# compute output shape
+		if self.pad=='SAME':
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]]
+		else:
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]]
+
+	def build(self, input_shape):
+		self._parse_args(input_shape)
+		if self.values is not None:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+		else:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+		if self.usebias:
+			if self.values is not None:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+			else:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+		
+	def call(self, x):
+		# x = tf.expand_dims(x, axis=1)
+		out = tf.nn.conv1d_transpose(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out,self.bias)
+		# out = tf.squeeze(out, axis=1)
+		return out 
+
+class deconv2D(Layer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+		super(conv1D, self).__init__()
+		self.size = size
+		self.outchn = outchn
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+		self.values = values
+		self.dilation_rate = dilation_rate
+
+	def _parse_args(self, input_shape):
+		# set size
+		inchannel = input_shape[-1]
+		if isinstance(self.size,list):
+			self.size = [self.size[0],self.size[1],inchannel,self.outchn]
+		else:
+			self.size = [self.size, self.size, inchannel, self.outchn]
+		# set stride
+		if isinstance(self.stride,list):
+			self.stride = [1,self.stride[0],self.stride[1],1]
+		else:
+			self.stride = [1,self.stride, self.stride, 1]
+		# set dilation
+		if isinstance(self.dilation_rate,list):
+			self.dilation_rate = [1,self.dilation_rate[0],self.dilation_rate[1],1]
+		else:
+			self.dilation_rate = [1,self.dilation_rate,self.dilation_rate,1]
+
+		# compute output shape
+		if self.pad=='SAME':
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]*self.stride[2], input_shape[3]]
+		else:
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]*self.stride[2]+self.size[2]-self.stride[2], input_shape[3]]
+
+	def build(self, input_shape):
+		self._parse_args(input_shape)
+		if self.values is not None:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+		else:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+		if self.usebias:
+			if self.values is not None:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+			else:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+		
+	def call(self, x):
+		# x = tf.expand_dims(x, axis=1)
+		out = tf.nn.conv2d_transpose(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out,self.bias)
+		# out = tf.squeeze(out, axis=1)
+		return out 
+
+class deconv3D(Layer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+		super(conv1D, self).__init__()
+		self.size = size
+		self.outchn = outchn
+		self.stride = stride
+		self.pad = pad 
+		self.usebias = usebias
+		self.values = values
+		self.dilation_rate = dilation_rate
+
+	def _parse_args(self, input_shape):
+		# set size
+		inchannel = input_shape[-1]
+		if isinstance(self.size,list):
+			self.size = [self.size[0], self.size[1], self.size[2],inchannel,self.outchn]
+		else:
+			self.size = [self.size, self.size, self.size, inchannel, self.outchn]
+		# set stride
+		if isinstance(self.stride,list):
+			self.stride = [1,self.stride[0],self.stride[1], self.stride[2],1]
+		else:
+			self.stride = [1,self.stride, self.stride, self.stride, 1]
+		# set dilation
+		if isinstance(self.dilation_rate,list):
+			self.dilation_rate = [1,self.dilation_rate[0],self.dilation_rate[1],self.dilation_rate[2],1]
+		else:
+			self.dilation_rate = [1,self.dilation_rate,self.dilation_rate,self.dilation_rate,1]
+		# compute output shape
+		if self.pad=='SAME':
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]*self.stride[2], input_shape[3]*self.stride[3], input_shape[4]]
+		else:
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], input_shape[2]*self.stride[2]+self.size[2]-self.stride[2], input_shape[3]*self.stride[3]+self.size[3]-self.stride[3], input_shape[4]]
+
+	def build(self, input_shape):
+		self._parse_args(input_shape)
+		if self.values is not None:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+		else:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+		if self.usebias:
+			if self.values is not None:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+			else:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+		
+	def call(self, x):
+		# x = tf.expand_dims(x, axis=1)
+		out = tf.nn.conv3d_transpose(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out,self.bias)
+		# out = tf.squeeze(out, axis=1)
+		return out 
+
 class maxpoolLayer(Layer):
 	def __init__(self, size, stride, pad='SAME'):
 		super(maxpoolLayer, self).__init__()
