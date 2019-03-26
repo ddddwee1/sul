@@ -3,7 +3,9 @@ Self-use layers based on Tensorflow. Samples can be viewed in ./sample/
 
 TF2.0 IS COMING!!!!!!!!!!!!!!
 
-TF2.0 IS STILL IN PREVIEW VERSION. ANNOYING...
+Let's get ready for a KerasFlow!
+
+Keras layers are quite similar to SUL2, so it will be no problem for migration.
 
 #### SUL2.0
 ##### Introduction
