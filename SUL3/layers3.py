@@ -1,9 +1,21 @@
 import tensorflow as tf 
-from tensorflow.keras.layers import Layer 
+import tensorflow.keras.layers.Layer as KLayer 
 import numpy as np 
 
-class conv2D(Layer):
-	def __init__(self, size, outchn, stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+# dumb layer declaration
+class Layer(KLayer):
+	def __init__(self, *args, **kwargs):
+		super(Layer, self).__init__()
+		self.initialize(*args, **kwargs)
+
+	def initialize(self, *args, **kwargs):
+		pass 
+
+	def call(self, x):
+		return x 
+
+class conv2D(KLayer):
+	def __init__(self, size, outchn, stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
 		super(conv2D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -49,8 +61,8 @@ class conv2D(Layer):
 			out = tf.nn.bias_add(out, self.bias)
 		return out 
 
-class conv3D(Layer):
-	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+class conv3D(KLayer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
 		super(conv3D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -96,8 +108,8 @@ class conv3D(Layer):
 			out = tf.nn.bias_add(out,self.bias)
 		return out 
 
-class conv1D(Layer):
-	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+class conv1D(KLayer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
 		super(conv1D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -136,8 +148,8 @@ class conv1D(Layer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
-class deconv1D(Layer):
-	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
+class deconv1D(KLayer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
 		super(conv1D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -181,9 +193,9 @@ class deconv1D(Layer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
-class deconv2D(Layer):
-	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
-		super(conv1D, self).__init__()
+class deconv2D(KLayer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		super(conv2D, self).__init__()
 		self.size = size
 		self.outchn = outchn
 		self.stride = stride
@@ -236,9 +248,9 @@ class deconv2D(Layer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
-class deconv3D(Layer):
-	def __init__(self,size,outchn,stride=1,pad='SAME',usebias=True,values=None,dilation_rate=1):
-		super(conv1D, self).__init__()
+class deconv3D(KLayer):
+	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		super(conv3D, self).__init__()
 		self.size = size
 		self.outchn = outchn
 		self.stride = stride
@@ -290,7 +302,7 @@ class deconv3D(Layer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
-class maxpoolLayer(Layer):
+class maxpoolLayer(KLayer):
 	def __init__(self, size, stride, pad='SAME'):
 		super(maxpoolLayer, self).__init__()
 		self.size = size
@@ -301,7 +313,7 @@ class maxpoolLayer(Layer):
 		out = tf.nn.max_pool(x, self.size, self.stride, self.pad)
 		return out 
 
-class avgpoolLayer(Layer):
+class avgpoolLayer(KLayer):
 	def __init__(self, size, stride, pad='SAME'):
 		super(avgpoolLayer, self).__init__()
 		self.size = size 
@@ -312,7 +324,7 @@ class avgpoolLayer(Layer):
 		out = tf.nn.avg_pool(x, self.size, self.stride, self.pad)
 		return out 
 
-class activation(Layer):
+class activation(KLayer):
 	def __init__(self, param, **kwargs):
 		super(activation, self).__init__()
 
@@ -345,7 +357,7 @@ class activation(Layer):
 			res =  x
 		return res
 
-class fcLayer(Layer):
+class fcLayer(KLayer):
 	def __init__(self, outsize, usebias=True, values=None):
 		super(fcLayer, self).__init__()
 		self.outsize = outsize
@@ -375,7 +387,7 @@ class fcLayer(Layer):
 			res = tf.nn.bias_add(res, self.bias)
 		return res 
 
-class batch_norm(Layer):
+class batch_norm(KLayer):
 	def __init__(self, decay=0.01, epsilon=0.001, is_training=None, values=None):
 		super(batch_norm, self).__init__()
 
@@ -426,7 +438,7 @@ class batch_norm(Layer):
 			res = tf.reshape(res, inp_shape)
 		return res 
 
-class flatten(Layer):
+class flatten(KLayer):
 	def __init__(self):
 		super(flatten, self).__init__()
 
@@ -434,13 +446,14 @@ class flatten(Layer):
 		self.shape = input_shape
 
 	def call(self, x):
+		self.shape = x.get_shape().as_list()
 		num = 1
 		for k in self.shape[1:]:
 			num *= k 
 		res = tf.reshape(x, [-1, num])
 		return res 
 
-class graphConvLayer(Layer):
+class graphConvLayer(KLayer):
 	def __init__(self, outsize, adj_mtx=None, adj_fn=None, values=None, usebias=True):
 		super(graphConvLayer, self).__init__()
 		assert (adj_mtx is None) ^ (adj_fn is None), 'Assign either adj_mtx or adj_fn' 
@@ -496,10 +509,10 @@ class graphConvLayer(Layer):
 			res = tf.nn.bias_add(res, self.b)
 		return res 
 
-class bilinearUpSample(Layer):
+class bilinearUpSample(KLayer):
 	def __init__(self, factor):
-		self.factor = factor
 		super(bilinearUpSample, self).__init__()
+		self.factor = factor
 
 	def upsample_kernel(size):
 		factor = (size +1)//2
