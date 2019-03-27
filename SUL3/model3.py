@@ -257,3 +257,119 @@ class Saver():
 			print(e)
 			print('Model restore failed.')
 			print('Model will auto-initialize after first iteration.')
+
+
+###############
+# accumulator
+class GradAccumulator():
+	def __init__(self):
+		self.steps = 0
+		self.grads = []
+
+	def accumulate(self, grads):
+		if len(grads)==0:
+			self.grads = grads
+		else:
+			for old_g, new_g in zip(self.grads, grads):
+				old_g.assign_add(new_g)
+		self.steps += 1
+
+	def get(self):
+		res = [i/self.steps for i in self.grads]
+		self.grads = []
+		self.steps = 0
+		return res 
+
+	def get_step(self):
+		return self.steps
+
+######### Data Reader Template (parallel) ##########
+# multi-process to read data
+class DataReader():
+	def __init__(self, data, fn, batch_size, shuffle=False, random_sample=False, processes=1, post_fn=None):
+		from multiprocessing import Pool
+		self.pool = Pool(processes)
+		print('Starting parallel data loader...')
+		self.process_fn = fn
+		self.data = data
+		self.batch_size = batch_size
+		self.position = batch_size
+		self.post_fn = post_fn
+		self.random_sample = random_sample
+		self.shuffle = shuffle
+		if shuffle:
+			random.shuffle(self.data)
+		self._start_p(self.data[:batch_size])
+
+	def _start_p(self, data):
+		self.ps = []
+		for i in data:
+			self.ps.append(self.pool.apply_async(self.process_fn, [i]))
+
+	def get_next_batch(self):
+		# print('call')
+		# fetch data
+		res = [i.get() for i in self.ps]
+
+		# start new pre-fetch
+		if self.random_sample:
+			batch = random.sample(self.data, self.batch_size)
+		else:
+			if self.position + self.batch_size > len(self.data):
+				self.position = 0
+				if self.shuffle:
+					random.shuffle(self.data)	
+			batch = self.data[self.position:self.position+self.batch_size]
+			self.position += self.batch_size
+		
+		self._start_p(batch)
+
+		# post_process the data
+		if self.post_fn is not None:
+			res = self.post_fn(res)
+		return res 
+
+###############
+gradient_reverse = L.gradient_reverse
+
+def pad(x, pad):
+	if isinstance(pad, list):
+		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [pad[2],pad[3]], [0,0]])
+	else:
+		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[0,0]])
+	return x 
+
+def pad1D(x, pad):
+	if isinstance(pad, list):
+		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [0,0]])
+	else:
+		x = tf.pad(x, [[0,0],[pad,pad],[0,0]])
+	return x 
+
+def pad3D(x, pad):
+	if isinstance(pad, list):
+		x = tf.pad(x, [[0,0],[pad[0],pad[1]], [pad[2],pad[3]], [pad[4], pad[5]], [0,0]])
+	else:
+		x = tf.pad(x, [[0,0],[pad,pad],[pad,pad],[pad,pad],[0,0]])
+	return x 
+
+def image_transform(x, H, out_shape=None, interpolation='BILINEAR'):
+	# Will produce error if not specify 'output_shape' in eager mode
+	shape = x.get_shape().as_list()
+	if out_shape is None:
+		if len(shape)==4:
+			out_shape = shape[1:3]
+		else:
+			out_shape = shape[:2]
+	return tf.contrib.image.transform(x, H, interpolation=interpolation, output_shape=out_shape)
+ 
+def zip_grad(grads, vars):
+	assert len(grads)==len(vars)
+	grads_1 = []
+	vars_1 = []
+	for i in range(len(grads)):
+		if not grads[i] is None:
+			grads_1.append(grads[i])
+			vars_1.append(vars[i])
+	assert len(grads_1)!=0
+	return zip(grads_1, vars_1)
