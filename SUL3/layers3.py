@@ -1,5 +1,5 @@
 import tensorflow as tf 
-import tensorflow.keras.layers.Layer as KLayer 
+from tensorflow.keras.layers import Layer as KLayer 
 import numpy as np 
 
 # dumb layer declaration

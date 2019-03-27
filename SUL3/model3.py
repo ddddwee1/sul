@@ -1,7 +1,7 @@
 import layers3 as L 
 import tensorflow as tf 
 import numpy as np 
-import tensorflow.keras.Model as KModel
+from tensorflow.keras import Model as KModel
 
 # activation const
 PARAM_RELU = 0
@@ -72,9 +72,9 @@ class ETA():
 ################
 # Layer Class 
 
-class ConvLayer(KModel):
+class ConvLayer2D(KModel):
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
-		super(ConvLayer, self).__init__()
+		super(ConvLayer2D, self).__init__()
 		self.conv = L.conv2D(size, outchn, stride, pad, dilation_rate, usebias)
 		self.batch_norm = batch_norm
 		self.activation = activation
@@ -306,7 +306,7 @@ class DataReader():
 		for i in data:
 			self.ps.append(self.pool.apply_async(self.process_fn, [i]))
 
-	def get_next_batch(self):
+	def get_next(self):
 		# print('call')
 		# fetch data
 		res = [i.get() for i in self.ps]
@@ -328,6 +328,9 @@ class DataReader():
 		if self.post_fn is not None:
 			res = self.post_fn(res)
 		return res 
+
+	def __next__(self):
+		return self.get_next()
 
 ###############
 gradient_reverse = L.gradient_reverse
