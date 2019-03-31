@@ -1,6 +1,7 @@
 import tensorflow as tf 
 from tensorflow.keras.layers import Layer as KLayer 
 import numpy as np 
+import time
 
 # dumb layer declaration
 class Layer(KLayer):
@@ -432,13 +433,18 @@ class batch_norm(KLayer):
 		variable.assign_sub(delta)
 
 	def call(self, x):
-		if self.is_training is None:
-			is_training = tf.keras.backend.learning_phase()
-		else:
-			is_training = self.is_training
+		# if self.is_training is None:
+		# 	is_training = True
+		# else:
+		# 	is_training = self.is_training
+		is_training = True
+		print(is_training, time.time())
 		inp_shape = x.get_shape().as_list()
 		inp_dim_num = len(inp_shape)
 		if inp_dim_num==3:
+			x = tf.expand_dims(x, axis=1)
+		elif inp_dim_num==2:
+			x = tf.expand_dims(x, axis=1)
 			x = tf.expand_dims(x, axis=1)
 		elif inp_dim_num==5:
 			x = tf.reshape(x, [inp_shape[0], inp_shape[1], inp_shape[2]*inp_shape[3], inp_shape[4]])
@@ -450,6 +456,8 @@ class batch_norm(KLayer):
 			res, mean, var = tf.compat.v1.nn.fused_batch_norm(x, self.gamma, self.beta, self.moving_average, self.variance, self.epsilon, is_training=is_training)
 		if inp_dim_num==3:
 			res = tf.squeeze(res , axis=1)
+		elif inp_dim_num==2:
+			res = tf.squeeze(res, axis=[1,2])
 		elif inp_dim_num==5:
 			res = tf.reshape(res, inp_shape)
 		return res 

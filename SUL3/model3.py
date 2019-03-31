@@ -15,12 +15,11 @@ PARAM_SIGMOID = 6
 
 ######## util functions ###########
 def accuracy(pred,y,name='acc', one_hot=True):
-	with tf.variable_scope(name):
-		if one_hot:
-			correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(tf.argmax(y,-1),tf.int64))
-		else:
-			correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(y,tf.int64))
-		acc = tf.reduce_mean(tf.cast(correct,tf.float32))
+	if not one_hot:
+		correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(tf.argmax(y,-1),tf.int64))
+	else:
+		correct = tf.equal(tf.cast(tf.argmax(pred,-1),tf.int64),tf.cast(y,tf.int64))
+	acc = tf.reduce_mean(tf.cast(correct,tf.float32))
 	return acc
 
 ################
@@ -73,9 +72,9 @@ class ETA():
 ################
 # Layer Class 
 
-class ConvLayer2D(KModel):
+class ConvLayer(KModel):
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
-		super(ConvLayer2D, self).__init__()
+		super(ConvLayer, self).__init__()
 		self.conv = L.conv2D(size, outchn, stride, pad, dilation_rate, usebias)
 		self.batch_norm = batch_norm
 		self.activation = activation
@@ -347,6 +346,7 @@ class ParallelTraining():
 		self.devices = devices
 		self.grads = None
 
+	# @tf.function
 	def compute_grad_loss(self, data, grad_loss_fn, *args, **kwargs):
 		threads = []
 		# pool = ThreadPool(processes=len(self.devices))
@@ -362,18 +362,22 @@ class ParallelTraining():
 		# rr = [p.get() for p in processes]
 
 		rr = []
-		for idx,i in enumerate(self.devices):
-			with tf.device('/gpu:%d'%i):
-				rr.append(grad_loss_fn(data[idx], self.model, *args, **kwargs))
 		
+		for idx,i in enumerate([0,1,2,3]):
+			with tf.device('/gpu:%d'%i):
+				rr.append(grad_loss_fn(data[idx], *args, **kwargs))
+		return rr
+		
+	def process_rr(self, rr):
+		losses = []
 		grads = [i[0] for i in rr]
 		grads = [sum(g) for g in zip(*grads)]
-		losses = [i[1] for i in rr]
-		loss = tf.reduce_mean(losses)
+		for i in rr:
+			losses.append(i[1])
 		self.grads = grads
-		self.loss = loss 
-		return grads, loss
+		return grads, losses
 
+	# @tf.function
 	def apply_grad(self, grads=None):
 		if grads is None:
 			grads = self.grads

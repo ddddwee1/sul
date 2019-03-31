@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np 
 import model3 as M 
 
-def ResBlock_v1(M.Model):
+class ResBlock_v1(M.Model):
 	def initialize(self, outchn, stride, bottle_neck=False):
 		self.stride = stride
 		self.outchn = outchn
@@ -60,7 +60,7 @@ class ResNet(M.Model):
 		self.head = HeadBlock(channel_list[0])
 		self.body = []
 		for num, chn in zip(blocknum_list, channel_list[1:]):
-			for i in num:
+			for i in range(num):
 				self.body.append(ResBlock_v1(chn, 2 if i==0 else 1))
 
 		self.emb_bn = M.BatchNorm()
@@ -70,6 +70,7 @@ class ResNet(M.Model):
 		x = self.head(x)
 		for block in self.body:
 			x = block(x)
+		x = M.flatten(x)
 		x = self.emb_bn(x)
 		x = self.embedding(x)
 		return x 
