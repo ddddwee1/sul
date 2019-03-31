@@ -1,6 +1,7 @@
 import layers3 as L 
 import tensorflow as tf 
 import numpy as np 
+import os 
 from tensorflow.keras import Model as KModel
 
 # activation const
@@ -228,7 +229,9 @@ class GraphConvLayer(KModel):
 # alias for layers
 AvgPool = L.avgpoolLayer
 MaxPool = L.maxpoolLayer
+GlobalAvgPool = L.globalAvgpoolLayer
 flatten = L.flatten()
+BatchNorm = L.batch_norm
 
 ###############
 # Saver 
@@ -237,6 +240,9 @@ class Saver():
 		self.model = model 
 
 	def save(self, path):
+		directory = os.path.dirname(path)
+		if not os.path.exists(directory):
+			os.makedirs(directory)
 		self.model.save_weights(path)
 
 	def restore(self, path):

@@ -324,6 +324,22 @@ class avgpoolLayer(KLayer):
 		out = tf.nn.avg_pool(x, self.size, self.stride, self.pad)
 		return out 
 
+class globalAvgpoolLayer(KLayer):
+	def __init__(self):
+		super(globalAvgpoolLayer, self).__init__()
+
+	def build(self, input_shape):
+		self.num_dim = len(input_shape)
+
+	def call(self, x):
+		if self.num_dim==3:
+			res = tf.reduce_mean(x, axis=1, keepdims=True)
+		elif self.num_dim==4:
+			res = tf.reduce_mean(x, axis=[1,2], keepdims=True)
+		elif self.num_dim==5:
+			res = tf.reduce_mean(x, axis=[1,2,3], keepdims=True)
+		return res 
+
 class activation(KLayer):
 	def __init__(self, param, **kwargs):
 		super(activation, self).__init__()
