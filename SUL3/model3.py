@@ -332,6 +332,58 @@ class DataReader():
 	def __next__(self):
 		return self.get_next()
 
+######## Parallel Training #########
+class ParallelTraining():
+	# very naive implementation. Not suitable for complex structure. Will modify in the future
+	def __init__(self, model, optimizer, devices):
+		self.model = model 
+		self.optimizer = optimizer
+		self.devices = devices
+		self.grads = None
+
+	def compute_grad_loss(self, data, grad_loss_fn, *args, **kwargs):
+		threads = []
+		# pool = ThreadPool(processes=len(self.devices))
+
+		# processes = []
+		# pool = ThreadPool(processes=1)
+		# for i in range(4):
+		# 	with tf.device('/gpu:%d'%i):
+		# 		pp = pool.apply_async(get_grads, (aa[i], model))
+		# 		processes.append(pp)
+
+		# # time.sleep(0.5)
+		# rr = [p.get() for p in processes]
+
+		rr = []
+		for idx,i in enumerate(self.devices):
+			with tf.device('/gpu:%d'%i):
+				rr.append(grad_loss_fn(data[idx], self.model, *args, **kwargs))
+		
+		grads = [i[0] for i in rr]
+		grads = [sum(g) for g in zip(*grads)]
+		losses = [i[1] for i in rr]
+		loss = tf.reduce_mean(losses)
+		self.grads = grads
+		self.loss = loss 
+		return grads, loss
+
+	def apply_grad(self, grads=None):
+		if grads is None:
+			grads = self.grads
+		self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+	def split_data(self, data):
+		res = []
+		length = len(data[0])
+		len_split = length//len(self.devices)
+		for i in range(len(self.devices)):
+			buff = []
+			for j in range(len(data)):
+				buff.append(data[j][i*len_split: min(length, i*len_split+len_split)])
+			res.append(buff)
+		return res 
+
 ###############
 gradient_reverse = L.gradient_reverse
 
