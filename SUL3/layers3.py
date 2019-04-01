@@ -1,3 +1,5 @@
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf 
 from tensorflow.keras.layers import Layer as KLayer 
 import numpy as np 
@@ -375,11 +377,12 @@ class activation(KLayer):
 		return res
 
 class fcLayer(KLayer):
-	def __init__(self, outsize, usebias=True, values=None):
+	def __init__(self, outsize, usebias=True, values=None, norm=False):
 		super(fcLayer, self).__init__()
 		self.outsize = outsize
 		self.usebias = usebias
 		self.values = values
+		self.norm = norm 
 
 	def _parse_args(self, input_shape):
 		# set size
@@ -399,7 +402,11 @@ class fcLayer(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(0.0))
 
 	def call(self, x):
-		res = tf.matmul(x, self.kernel)
+		if self.norm:
+			k = tf.nn.l2_normalize(self.kernel, axis=0)
+		else:
+			k = self.kernel
+		res = tf.matmul(x, k)
 		if self.usebias:
 			res = tf.nn.bias_add(res, self.bias)
 		return res 
@@ -433,12 +440,12 @@ class batch_norm(KLayer):
 		variable.assign_sub(delta)
 
 	def call(self, x):
-		# if self.is_training is None:
-		# 	is_training = True
-		# else:
-		# 	is_training = self.is_training
-		is_training = True
-		print(is_training, time.time())
+		if self.is_training is None:
+			is_training = bool(tf.keras.backend.learning_phase())
+		else:
+			is_training = self.is_training
+		# is_training = True
+		# print(is_training, time.time())
 		inp_shape = x.get_shape().as_list()
 		inp_dim_num = len(inp_shape)
 		if inp_dim_num==3:

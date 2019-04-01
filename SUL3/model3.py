@@ -187,9 +187,9 @@ class DeconvLayer3D(KModel):
 		return x 
 
 class Dense(KModel):
-	def __init__(self, outsize, batch_norm=False, activation=-1 , usebias=True):
+	def __init__(self, outsize, batch_norm=False, activation=-1 , usebias=True, norm=False):
 		super(Dense, self).__init__()
-		self.fc = L.fcLayer(outsize, usebias)
+		self.fc = L.fcLayer(outsize, usebias, norm=norm)
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if batch_norm:
@@ -235,34 +235,34 @@ BatchNorm = L.batch_norm
 ###############
 # Saver 
 class Saver():
-	def __init__(self, model=None):
+	# DO NOT USE TF KERAS SAVE MODEL !!!!
+	def __init__(self, model=None, optimizer=None):
 		self.model = model 
+		self.optimizer = optimizer
+		self.checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
 
 	def save(self, path):
 		directory = os.path.dirname(path)
 		if not os.path.exists(directory):
 			os.makedirs(directory)
-		self.model.save_weights(path)
+		self.checkpoint.save(path)
 
 	def restore(self, path):
 		try:
-			if self.model is None:
-				return tf.keras.models.load_model(path)
-			else:
-				if not path[-4:]=='ckpt':
-					last_ckpt = tf.train.latest_checkpoint(path)
-					if last_ckpt is None:
-						print('No model found in checkpoint.')
-						print('Model will auto-initialize after first iteration.')
-						return 
-					else:
-						path = last_ckpt
-				self.model.load_weights(path)
+			if (not path[-4:]=='ckpt'):
+				last_ckpt = tf.train.latest_checkpoint(path)
+				if last_ckpt is None:
+					print('No model found in checkpoint.')
+					print('Model will auto-initialize after first iteration.')
+					return 	
+				else:
+					path = last_ckpt
+				self.checkpoint.restore(path)
+			print('Model loaded ')
 		except Exception as e :
 			print(e)
 			print('Model restore failed.')
 			print('Model will auto-initialize after first iteration.')
-
 
 ###############
 # accumulator
@@ -340,15 +340,15 @@ class DataReader():
 ######## Parallel Training #########
 class ParallelTraining():
 	# very naive implementation. Not suitable for complex structure. Will modify in the future
-	def __init__(self, model, optimizer, devices):
+	def __init__(self, model, optimizer, devices, grad_loss_fn):
 		self.model = model 
 		self.optimizer = optimizer
 		self.devices = devices
 		self.grads = None
+		self.grad_loss_fn = grad_loss_fn
 
-	# @tf.function
-	def compute_grad_loss(self, data, grad_loss_fn, *args, **kwargs):
-		threads = []
+	def compute_grad_loss(self, data, *args, **kwargs):
+		# threads = []
 		# pool = ThreadPool(processes=len(self.devices))
 
 		# processes = []
@@ -363,12 +363,9 @@ class ParallelTraining():
 
 		rr = []
 		
-		for idx,i in enumerate([0,1,2,3]):
+		for idx,i in enumerate(self.devices):
 			with tf.device('/gpu:%d'%i):
-				rr.append(grad_loss_fn(data[idx], *args, **kwargs))
-		return rr
-		
-	def process_rr(self, rr):
+				rr.append(self.grad_loss_fn(data[idx], *args, **kwargs))
 		losses = []
 		grads = [i[0] for i in rr]
 		grads = [sum(g) for g in zip(*grads)]
@@ -377,11 +374,25 @@ class ParallelTraining():
 		self.grads = grads
 		return grads, losses
 
-	# @tf.function
 	def apply_grad(self, grads=None):
 		if grads is None:
 			grads = self.grads
 		self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+	@tf.function
+	def train_step(self, data):
+		rr = []
+		for idx,i in enumerate(self.devices):
+			with tf.device('/gpu:%d'%i):
+				rr.append(self.grad_loss_fn(data[idx], self.model))
+				print('GPU:%d'%i)
+		losses = []
+		grads = [i[0] for i in rr]
+		grads = [sum(g) for g in zip(*grads)]
+		for i in rr:
+			losses.append(i[1])
+		self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+		return losses
 
 	def split_data(self, data):
 		res = []
