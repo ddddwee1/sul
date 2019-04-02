@@ -34,3 +34,13 @@ class video_saver():
 		self.vidwriter.write(img)
 	def finish(self):
 		self.vidwriter.release()
+
+def computeIOU(box1, box2):
+	x1, y1, x2, y2 = box1
+	x3, y3, x4, y4 = box2 
+	dx = max(0, min(x2,x4) - max(x1,x3))
+	dy = max(0, min(y2,y4) - max(y1,y3))
+	inter = dx*dy 
+	union = (x4 - x3) * (y4 - y3) + (x2 - x1) * (y2 - y1) - inter
+	iou = inter / (union + 1)
+	return iou 
