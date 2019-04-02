@@ -9,12 +9,12 @@ import time
 class FaceResNet(M.Model):
 	def initialize(self, num_classes):
 		self.resnet = resnet.ResNet([64,64,128,256,512], [3, 4, 14, 3], 512)
-		self.classifier = losspart.MarginalCosineLayer(num_classes)
+		self.classifier = losspart.ArcFace(num_classes)
 
-	def forward(self, x, label):
+	def forward(self, x):
 		feat = self.resnet(x)
 		feat = tf.nn.dropout(feat, 0.6)
-		logits = self.classifier(feat, label, 1.1, 0.4, 0.0)
+		logits = self.classifier(feat)
 		logits = logits * 40
 		return logits
 
@@ -26,7 +26,7 @@ tf.keras.backend.set_learning_phase(True)
 def grad_loss(x, model):
 	data, label = x
 	with tf.GradientTape() as tape:
-		out = model(data, label)
+		out = model(data)
 		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=label))
 	acc = M.accuracy(out, label, one_hot=False)
 	grads = tape.gradient(loss, model.trainable_variables)
@@ -38,9 +38,8 @@ t0 = time.time()
 with tf.device('/cpu:0'):
 	model = FaceResNet(data_reader.max_label + 1)
 	optimizer = tf.optimizers.Adam(0.0001)
-	saver = M.Saver(model.resnet)
+	saver = M.Saver(model, optimizer)
 	saver.restore('./model/')
-	saver = M.saver(model, optimizer)
 	
 	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss, input_size=[112,112,3]) 
 

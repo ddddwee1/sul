@@ -239,7 +239,10 @@ class Saver():
 	def __init__(self, model=None, optimizer=None):
 		self.model = model 
 		self.optimizer = optimizer
-		self.checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+		if optimizer is None:
+			self.checkpoint = tf.train.Checkpoint(model=model)
+		else:
+			self.checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
 
 	def save(self, path):
 		directory = os.path.dirname(path)
@@ -340,8 +343,9 @@ class DataReader():
 ######## Parallel Training #########
 class ParallelTraining():
 	# very naive implementation. Not suitable for complex structure. Will modify in the future
-	def __init__(self, model, optimizer, devices, grad_loss_fn):
+	def __init__(self, model, optimizer, devices, grad_loss_fn, input_size):
 		self.model = model 
+		_ = model(np.float32([np.ones(input_size)]))
 		self.optimizer = optimizer
 		self.devices = devices
 		self.grads = None
