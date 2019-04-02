@@ -201,3 +201,52 @@ class Plotter2D():
 
 	def imshow(self, img, **kwargs):
 		self.ax.imshow(img, **kwargs)
+
+class LossPlotter():
+	def __init__(self, loss_file, skip_first=False, splitter='\t'):
+		fig = plt.figure()
+		self.ax = fig.add_subplot(111)
+		self.losses = []
+		f = open(loss_file)
+		if skip_first:
+			f.readline()
+		for i in f:
+			i = i.strip()
+			buff = i.split(splitter)
+			buff = [float(_) for _ in buff]
+			self.losses.append(buff)
+		self.losses = list(zip(*self.losses))
+		self.losses = [np.array(_) for _ in self.losses]
+
+	def apply_ema(self, ignore_index=0):
+		def ema(arr, alpha=0.05):
+			for i in range(len(arr)-1):
+				arr[i+1] = alpha * arr[i+1] + (1 - alpha) * arr[i]
+
+		for i in range(ignore_index, len(self.losses)):
+			ema(self.losses[i])
+
+	def plot(self, ignore_index=0, labels=None, lims=None, iteration_interval=1):
+		if lims is not None:
+			self.ax.set_xlim(lims[0])
+			self.ax.set_ylim(lims[1])
+		x = np.float32(list(range(len(self.losses[0])))) * iteration_interval
+		data = self.losses[ignore_index:]
+		if labels is None:
+			for d in data:
+				self.ax.plot(x, d)
+		else:
+			for d,lb in zip(data,labels):
+				self.ax.plot(x, d, label=lb)
+
+	def set_title(self, title):
+		self.ax.title(title)
+	def set_xylabel(self, label):
+		self.ax.set_xlabel(label[0])
+		self.ax.set_ylabel(label[1])
+	def set_legend(self, location):
+		self.ax.legend(loc=location)
+	def show(self, ion=True):
+		if ion:
+			plt.ion()
+		plt.show()
