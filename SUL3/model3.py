@@ -28,13 +28,14 @@ def accuracy(pred,y,name='acc', one_hot=True):
 class Model(KModel):
 	def __init__(self, *args, **kwargs):
 		super(Model, self).__init__()
-
+		self.graph_initialized = False
 		self.initialize(*args, **kwargs)
 
 	def initialize(self, *args, **kwargs):
 		pass 
 
 	def call(self, x, *args, **kwargs):
+		self.graph_initialized = True
 		return self.forward(x, *args, **kwargs)
 
 	def forward(self, x, *args, **kwargs):
@@ -343,9 +344,11 @@ class DataReader():
 ######## Parallel Training #########
 class ParallelTraining():
 	# very naive implementation. Not suitable for complex structure. Will modify in the future
-	def __init__(self, model, optimizer, devices, grad_loss_fn, input_size):
+	def __init__(self, model, optimizer, devices, grad_loss_fn, input_size=None):
 		self.model = model 
-		_ = model(np.float32([np.ones(input_size)]))
+		if not input_size is None:
+			_ = model(np.float32([np.ones(input_size)]))
+		assert model.graph_initialized, 'Model should be initialized before parallel training'
 		self.optimizer = optimizer
 		self.devices = devices
 		self.grads = None

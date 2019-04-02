@@ -14,7 +14,7 @@ class FaceResNet(M.Model):
 	def forward(self, x, label):
 		feat = self.resnet(x)
 		feat = tf.nn.dropout(feat, 0.6)
-		logits = self.classifier(feat, label, 1.1, 0.4, 0.0)
+		logits = self.classifier(feat, label, 1.0, 0.0, 0.0)
 		logits = logits * 40
 		return logits
 
@@ -40,9 +40,11 @@ with tf.device('/cpu:0'):
 	optimizer = tf.optimizers.Adam(0.0001)
 	saver = M.Saver(model.resnet)
 	saver.restore('./model/')
-	saver = M.saver(model, optimizer)
+	saver = M.Saver(model, optimizer)
+
+	_ = model(np.float32(np.ones([1,112,112,3])), np.float32(np.eye(data_reader.max_label+1)[0]))
 	
-	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss, input_size=[112,112,3]) 
+	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss) 
 
 	for ep in range(EPOCH):
 		for it in range(data_reader.iter_per_epoch):

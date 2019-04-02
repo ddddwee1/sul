@@ -19,19 +19,15 @@ class MarginalCosineLayer(M.Model):
 		label = tf.convert_to_tensor(label)
 		x = tf.nn.l2_normalize(x, axis=1)
 		x = self.classifier(x)
-		print(x)
 		if not(m1==1.0 and m2==0.0):
 			t = tf.gather_nd(x, indices=tf.where(label>0.)) #shape: [N]
 			t = tf.math.acos(t)
-
 			### original 
 			# if m1!=1.0:
 			# 	t = t*m1
 			# if m2!=0.0:
 			# 	t = t+m2 
-
 			### experimental: to limit the value not exceed pi
-			print(t)
 			if m1!=1.0:
 				t = t*m1
 				t1 = t * np.pi / tf.stop_gradient(t)
@@ -40,7 +36,6 @@ class MarginalCosineLayer(M.Model):
 				t = t+m2 
 				t1 = t + np.pi - tf.stop_gradient(t)
 				t = tf.minimum(t,t1)
-			print(t)
 			t = tf.math.cos(t)
 			t = tf.expand_dims(t, axis=1)
 			x = x*(1-label) + t*label
