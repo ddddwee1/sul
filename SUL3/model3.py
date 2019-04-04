@@ -232,6 +232,8 @@ MaxPool = L.maxpoolLayer
 GlobalAvgPool = L.globalAvgpoolLayer
 flatten = L.flatten()
 BatchNorm = L.batch_norm
+DeconvLayer2D = DeconvLayer
+ConvLayer2D = ConvLayer
 
 ###############
 # Saver 
@@ -250,6 +252,7 @@ class Saver():
 		if not os.path.exists(directory):
 			os.makedirs(directory)
 		self.checkpoint.save(path)
+		print('Save to path:',path)
 
 	def restore(self, path):
 		try:
@@ -262,7 +265,7 @@ class Saver():
 				else:
 					path = last_ckpt
 				self.checkpoint.restore(path)
-			print('Model loaded ')
+			print('Model loaded:',path)
 		except Exception as e :
 			print(e)
 			print('Model restore failed.')
