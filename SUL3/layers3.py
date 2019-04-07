@@ -23,10 +23,11 @@ class conv2D(KLayer):
 		self.size = size
 		self.outchn = outchn
 		self.stride = stride
-		self.pad = pad 
 		self.usebias = usebias
 		self.values = values
 		self.dilation_rate = dilation_rate
+		assert (pad in ['SAME','VALID','SAME_LEFT'])
+		self.pad = pad 
 
 	def _parse_args(self, input_shape):
 		inchannel = input_shape[-1]
@@ -47,6 +48,7 @@ class conv2D(KLayer):
 			self.dilation_rate = [1,self.dilation_rate,self.dilation_rate,1]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -57,8 +59,13 @@ class conv2D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
 			else:
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+		if self.pad == 'SAME_LEFT':
+			self.pad_value = [self.size[0]//2, self.size[1]//2]
 
 	def call(self, x):
+		if self.pad=='SAME_LEFT':
+			x = tf.pad(x, [[0,0], [self.pad_value[0], self.pad_value[0]], [self.pad_value[1], self.pad_value[1]], [0,0]])
+			self.pad = 'VALID'
 		out = tf.nn.conv2d(x, self.kernel, self.stride, self.pad, dilations=self.dilation_rate)
 		if self.usebias:
 			out = tf.nn.bias_add(out, self.bias)
@@ -94,6 +101,7 @@ class conv3D(KLayer):
 			self.dilation_rate = [1,self.dilation_rate,self.dilation_rate,self.dilation_rate,1]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -132,6 +140,7 @@ class conv1D(KLayer):
 		self.dilation_rate = [1,self.dilation_rate,1]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -177,6 +186,7 @@ class deconv1D(KLayer):
 			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -232,6 +242,7 @@ class deconv2D(KLayer):
 			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]*self.stride[2]+self.size[2]-self.stride[2], input_shape[3]]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -286,6 +297,7 @@ class deconv3D(KLayer):
 			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], input_shape[2]*self.stride[2]+self.size[2]-self.stride[2], input_shape[3]*self.stride[3]+self.size[3]-self.stride[3], input_shape[4]]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -312,7 +324,18 @@ class maxpoolLayer(KLayer):
 		self.stride = stride
 		self.pad = pad 
 
+	def build(self, input_shape):
+		self.dim = len(input_shape)
+
 	def call(self, x):
+		if self.pad=='SAME_LEFT':
+			if isinstance(self.size, int):
+				padpix = self.size//2
+				padpix = [[0,0]] + [[padpix, padpix]]* (self.dim-2) + [[0,0]]
+				x = tf.pad(x, padpix)
+				self.pad = 'VALID'
+			if isinstance(self.size, list):
+				raise NotImplementedError('Not implmeneted for non-square kernel in pooling')
 		out = tf.nn.max_pool(x, self.size, self.stride, self.pad)
 		return out 
 
@@ -324,6 +347,14 @@ class avgpoolLayer(KLayer):
 		self.pad = pad 
 
 	def call(self, x):
+		if self.pad=='SAME_LEFT':
+			if isinstance(self.size, int):
+				padpix = self.size//2
+				padpix = [[0,0]] + [[padpix, padpix]]* (self.dim-2) + [[0,0]]
+				x = tf.pad(x, padpix)
+				self.pad = 'VALID'
+			if isinstance(self.size, list):
+				raise NotImplementedError('Not implmeneted for non-square kernel in pooling')
 		out = tf.nn.avg_pool(x, self.size, self.stride, self.pad)
 		return out 
 
@@ -390,6 +421,7 @@ class fcLayer(KLayer):
 		self.size = [insize, self.outsize]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
@@ -412,7 +444,7 @@ class fcLayer(KLayer):
 		return res 
 
 class batch_norm(KLayer):
-	def __init__(self, decay=0.01, epsilon=0.001, is_training=None, values=None):
+	def __init__(self, decay=0.01, epsilon=1e-5, is_training=None, values=None):
 		super(batch_norm, self).__init__()
 
 		self.decay = decay
@@ -421,6 +453,7 @@ class batch_norm(KLayer):
 		self.values = values
 
 	def build(self, input_shape):
+		values = self.values
 		shape = input_shape[-1]
 		if self.values is None:
 			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(0.0),trainable=False)
@@ -501,6 +534,7 @@ class graphConvLayer(KLayer):
 		self.size = [insize, self.outsize]
 
 	def build(self, input_shape):
+		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
