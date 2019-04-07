@@ -245,6 +245,7 @@ flatten = L.flatten()
 BatchNorm = L.batch_norm
 DeconvLayer2D = DeconvLayer
 ConvLayer2D = ConvLayer
+BilinearUpSample = L.bilinearUpSample
 
 ###############
 # Saver 
