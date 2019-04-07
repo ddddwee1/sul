@@ -267,7 +267,7 @@ class Saver():
 
 	def restore(self, path):
 		try:
-			if (not path[-4:]=='ckpt'):
+			if (not '.ckpt' in path):
 				last_ckpt = tf.train.latest_checkpoint(path)
 				if last_ckpt is None:
 					print('No model found in checkpoint.')
@@ -275,7 +275,7 @@ class Saver():
 					return 	
 				else:
 					path = last_ckpt
-				self.checkpoint.restore(path)
+			self.checkpoint.restore(path)
 			print('Model loaded:',path)
 		except Exception as e :
 			print(e)
