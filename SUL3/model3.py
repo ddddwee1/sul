@@ -390,7 +390,7 @@ class ParallelTraining():
 				rr.append(self.grad_loss_fn(data[idx], *args, **kwargs))
 		losses = []
 		grads = [i[0] for i in rr]
-		grads = [sum(g) for g in zip(*grads)]
+		grads = [sum(g)/len(g) for g in zip(*grads)]
 		for i in rr:
 			losses.append(i[1])
 		self.grads = grads
