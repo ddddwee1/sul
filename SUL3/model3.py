@@ -104,13 +104,24 @@ class ConvLayer(KModel):
 		return x 
 
 class ConvLayer3D(KModel):
-	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
+	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True, values=None):
 		super(ConvLayer3D, self).__init__()
-		self.conv = L.conv3D(size, outchn, stride, pad, dilation_rate, usebias)
 		self.batch_norm = batch_norm
 		self.activation = activation
-		if batch_norm:
-			self.bn = L.batch_norm
+		self.values = values
+
+		if values is None:
+			self.conv = L.conv3D(size, outchn, stride, pad, dilation_rate, usebias)
+			if batch_norm:
+				self.bn = L.batch_norm()
+		else:
+			if usebias:
+				idx = 2
+			else:
+				idx = 1
+			self.conv = L.conv3D(size, outchn, stride, pad, dilation_rate, usebias, values=values[:idx])
+			if batch_norm:
+				self.bn = L.batch_norm(values=values[idx:])
 		if activation!=-1:
 			self.act = L.activation(activation)
 
