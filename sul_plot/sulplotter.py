@@ -250,3 +250,19 @@ class LossPlotter():
 		if ion:
 			plt.ion()
 		plt.show()
+
+class FilterPlotter():
+	def __init__(self):
+		fig = plt.figure()
+		self.ax = fig.add_subplot(111)
+
+	def plot(self, kernel):
+		f = np.fft.fft2(kernel)
+		f = np.fft.fftshift(f)
+		self.mag_spectrum = np.log(np.abs(f)+1)
+		self.ax.imshow(self.mag_spectrum, cmap='gray', interpolation='bilinear')
+
+	def show(self, ion=True):
+		if ion:
+			plt.ion()
+		plt.show()
