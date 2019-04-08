@@ -9,16 +9,16 @@ import time
 class FaceResNet(M.Model):
 	def initialize(self, num_classes):
 		self.resnet = resnet.ResNet([64,64,128,256,512], [3, 4, 14, 3], 512)
-		self.classifier = losspart.ArcFace(num_classes)
+		self.classifier = losspart.MarginalCosineLayer(num_classes)
 
-	def forward(self, x):
+	def forward(self, x, label):
 		feat = self.resnet(x)
-		feat = tf.nn.dropout(feat, 0.6)
-		logits = self.classifier(feat)
-		logits = logits * 40
+		feat = tf.nn.dropout(feat, 0.4)
+		logits = self.classifier(feat, label, 1.0, 0.5, 0.0)
+		logits = logits * 64
 		return logits
 
-BSIZE = 320
+BSIZE = 340
 EPOCH = 30
 data_reader = datareader.DataReader('img_list.txt', BSIZE)
 tf.keras.backend.set_learning_phase(True)
@@ -26,7 +26,7 @@ tf.keras.backend.set_learning_phase(True)
 def grad_loss(x, model):
 	data, label = x
 	with tf.GradientTape() as tape:
-		out = model(data)
+		out = model(data, label)
 		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=label))
 	acc = M.accuracy(out, label, one_hot=False)
 	grads = tape.gradient(loss, model.trainable_variables)
@@ -41,7 +41,11 @@ with tf.device('/cpu:0'):
 	saver = M.Saver(model, optimizer)
 	saver.restore('./model/')
 	
-	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss, input_size=[112,112,3]) 
+	
+
+	_ = model(np.float32(np.ones([1,112,112,3])), np.float32(np.eye(data_reader.max_label+1)[0]))
+	
+	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss) 
 
 	for ep in range(EPOCH):
 		for it in range(data_reader.iter_per_epoch):

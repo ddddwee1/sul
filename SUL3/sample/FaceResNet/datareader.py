@@ -4,6 +4,9 @@ import random
 from multiprocessing.pool import ThreadPool
 
 def adjust_img(img):
+	# a = np.random.randint(2)
+	# if a==1:
+	# 	img = np.flip(img, axis=1)
 	return img 
 
 def process(batch, max_label):
@@ -37,6 +40,7 @@ class DataReader():
 		self.iter_per_epoch = len(self.data)//self.bsize
 		self.pool = ThreadPool(processes=1)
 		self.prefetch()
+		print('max_label:',max_label)
 
 	def prefetch(self):
 		if self.pos + self.bsize > len(self.data):

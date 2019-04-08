@@ -64,7 +64,7 @@ class ResNet(M.Model):
 				self.body.append(ResBlock_v1(chn, 2 if i==0 else 1))
 
 		self.emb_bn = M.BatchNorm()
-		self.embedding = M.Dense(embedding_size, usebias=False, batch_norm=embedding_bn)
+		self.embedding = M.Dense(embedding_size, batch_norm=embedding_bn)
 
 	def forward(self, x):
 		x = self.head(x)
@@ -72,6 +72,7 @@ class ResNet(M.Model):
 			x = block(x)
 		x = M.flatten(x)
 		x = self.emb_bn(x)
+		x = tf.nn.dropout(x,0.4)
 		x = self.embedding(x)
 		return x 
 
