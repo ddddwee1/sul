@@ -11,9 +11,9 @@ class ResBlock_v1(M.Model):
 		self.c2 = M.ConvLayer(3, outchn, stride=stride, usebias=False, batch_norm=True)
 
 		# se module 
-		self.gp = M.GlobalAvgPool()
-		self.c3 = M.ConvLayer(1, outchn//16, activation=M.PARAM_LRELU)
-		self.c4 = M.ConvLayer(1, outchn, activation=M.PARAM_SIGMOID)
+		# self.gp = M.GlobalAvgPool()
+		# self.c3 = M.ConvLayer(1, outchn//16, activation=M.PARAM_LRELU)
+		# self.c4 = M.ConvLayer(1, outchn, activation=M.PARAM_SIGMOID)
 
 		# shortcut 
 		self.sc = M.ConvLayer(1, outchn, stride=stride, usebias=False, batch_norm=True)
@@ -26,10 +26,10 @@ class ResBlock_v1(M.Model):
 		res = self.c1(res)
 		res = self.c2(res)
 		# se
-		se = self.gp(res)
-		se = self.c3(se)
-		se = self.c4(se)
-		res = res * se 
+		# se = self.gp(res)
+		# se = self.c3(se)
+		# se = self.c4(se)
+		# res = res * se 
 		# shortcut 
 		if self.inchn==self.outchn and self.stride==1:
 			sc = x 
