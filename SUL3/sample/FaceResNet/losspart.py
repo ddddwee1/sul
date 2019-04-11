@@ -22,12 +22,13 @@ class MarginalCosineLayer(M.Model):
 		if not(m1==1.0 and m2==0.0):
 			t = tf.gather_nd(x, indices=tf.where(label>0.)) #shape: [N]
 			t = tf.math.acos(t)
-			### original 
+			### original ###
 			# if m1!=1.0:
 			# 	t = t*m1
 			# if m2!=0.0:
 			# 	t = t+m2 
-			### experimental: to limit the value not exceed pi
+			### end ###
+			### experimental: to limit the value not exceed pi ###
 			if m1!=1.0:
 				t = t*m1
 				t1 = t * np.pi / tf.stop_gradient(t)

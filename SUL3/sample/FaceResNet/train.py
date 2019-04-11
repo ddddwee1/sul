@@ -27,7 +27,9 @@ def grad_loss(x, model):
 	data, label = x
 	with tf.GradientTape() as tape:
 		out = model(data, label)
-		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=label))
+		wd = 0.0005
+		w_reg = wd * 0.5 * sum([tf.reduce_sum(tf.square(w)) for w in model.trainable_variables]) 
+		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=label)) + w_reg
 	acc = M.accuracy(out, label, one_hot=False) 
 	grads = tape.gradient(loss, model.trainable_variables)
 	return grads, [loss, acc]
