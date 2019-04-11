@@ -1,20 +1,33 @@
 # SUL
-Self-use layers based on Tensorflow. Samples can be viewed in ./sample/
 
-TF2.0 IS COMING!!!!!!!!!!!!!!
+Simple but useful layers
 
-Let's get ready for a KerasFlow!
+Whatever.
 
-Keras layers are quite similar to SUL2, so it will be no problem for migration.
+Now updated to SUL3.0 for tf2
 
-#### SUL2.0
-##### Introduction
+Examples in './example/'
 
-Now the main model and layer is replaced by SUL2. SUL1 is moved into './SUL1'. 
+### Projects
 
-##### Features
+- ArcFace (Deng, Jiankang, et al. "Arcface: Additive angular margin loss for deep face recognition." arXiv preprint arXiv:1801.07698 (2018))
 
-- Replace layers with class-based structures.
-- Reduce redundancy
-- Modified for eager execution. It will be easier to use and more user-friendly.
-- This is a light-weight wrap-up of tensorflow layers; therefore it will be convenient to touch the lower-level operations.
+- Enforced Softmax (Cheng, Yu, et al. "Know you at one glance: A compact vector representation for low-shot learning." Proceedings of the IEEE International Conference on Computer Vision. 2017)
+
+- Cycle GAN (Zhu, Jun-Yan, et al. "Unpaired image-to-image translation using cycle-consistent adversarial networks." Proceedings of the IEEE International Conference on Computer Vision. 2017)
+
+- PSM Net (Chang, Jia-Ren, and Yong-Sheng Chen. "Pyramid stereo matching network." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2018)
+
+- Stacked Hourglass (Newell, Alejandro, Kaiyu Yang, and Jia Deng. "Stacked hourglass networks for human pose estimation." European Conference on Computer Vision. Springer, Cham, 2016)
+
+- Aging face (Zhao, Jian, et al. "Look Across Elapse: Disentangled Representation Learning and Photorealistic Cross-Age Face Synthesis for Age-Invariant Face Recognition." arXiv preprint arXiv:1809.00338 (2018))
+
+- Graph Convolution Net (Kipf, Thomas N., and Max Welling. "Semi-supervised classification with graph convolutional networks." arXiv preprint arXiv:1609.02907 (2016))
+
+- MNIST (Everthing begins here)
+
+- Model conversion (from torch to tf)
+
+- Multi-GPU training
+
+- Object detection framework (on-going)
