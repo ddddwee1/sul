@@ -69,15 +69,16 @@ class FeaturePyramid(M.Model):
 		self.c2_aft = M.ConvLayer(1, 128, activation=M.PARAM_RELU)
 		self.c3_in = M.ConvLayer(1, 128, activation=M.PARAM_RELU)
 		self.c3_aft = M.ConvLayer(1, 128, activation=M.PARAM_RELU)
-		self.upsample = M.BilinearUpSample(2)
+		self.upsample1 = M.BilinearUpSample(2)
+		self.upsample2 = M.BilinearUpSample(2)
 
 	def forward(self, f1,f2,f3):
 		res = self.c1(f1)
-		res = self.upsample(res)
+		res = self.upsample1(res)
 		f2 = self.c2_in(f2)
 		res = res + f2 
 		res = self.c2_aft(res)
-		res = self.upsample(res)
+		res = self.upsample2(res)
 		f3 = self.c3_in(f3)
 		res = res + f3 
 		res = self.c3_aft(res)

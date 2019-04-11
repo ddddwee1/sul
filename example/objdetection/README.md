@@ -4,11 +4,7 @@
 
 I implemented it. So what?
 
-### TO-DO
-
-- Data reader
-
-- Debug
+There are still tons of tricks in front of us.
 
 ### Link
 

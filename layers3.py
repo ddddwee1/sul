@@ -65,8 +65,10 @@ class conv2D(KLayer):
 	def call(self, x):
 		if self.pad=='SAME_LEFT':
 			x = tf.pad(x, [[0,0], [self.pad_value[0], self.pad_value[0]], [self.pad_value[1], self.pad_value[1]], [0,0]])
-			self.pad = 'VALID'
-		out = tf.nn.conv2d(x, self.kernel, self.stride, self.pad, dilations=self.dilation_rate)
+			pad = 'VALID'
+		else:
+			pad = self.pad
+		out = tf.nn.conv2d(x, self.kernel, self.stride, pad, dilations=self.dilation_rate)
 		if self.usebias:
 			out = tf.nn.bias_add(out, self.bias)
 		return out 
@@ -333,10 +335,12 @@ class maxpoolLayer(KLayer):
 				padpix = self.size//2
 				padpix = [[0,0]] + [[padpix, padpix]]* (self.dim-2) + [[0,0]]
 				x = tf.pad(x, padpix)
-				self.pad = 'VALID'
+				pad = 'VALID'
 			if isinstance(self.size, list):
 				raise NotImplementedError('Not implmeneted for non-square kernel in pooling')
-		out = tf.nn.max_pool(x, self.size, self.stride, self.pad)
+		else:
+			pad = self.pad
+		out = tf.nn.max_pool(x, self.size, self.stride, pad)
 		return out 
 
 class avgpoolLayer(KLayer):
@@ -352,10 +356,12 @@ class avgpoolLayer(KLayer):
 				padpix = self.size//2
 				padpix = [[0,0]] + [[padpix, padpix]]* (self.dim-2) + [[0,0]]
 				x = tf.pad(x, padpix)
-				self.pad = 'VALID'
+				pad = 'VALID'
 			if isinstance(self.size, list):
 				raise NotImplementedError('Not implmeneted for non-square kernel in pooling')
-		out = tf.nn.avg_pool(x, self.size, self.stride, self.pad)
+		else:
+			pad = self.pad
+		out = tf.nn.avg_pool(x, self.size, self.stride, pad)
 		return out 
 
 class globalAvgpoolLayer(KLayer):
@@ -579,7 +585,7 @@ class bilinearUpSample(KLayer):
 		super(bilinearUpSample, self).__init__()
 		self.factor = factor
 
-	def upsample_kernel(size):
+	def upsample_kernel(self, size):
 		factor = (size +1)//2
 		if size%2==1:
 			center = factor - 1
@@ -588,7 +594,7 @@ class bilinearUpSample(KLayer):
 		og = np.ogrid[:size, :size]
 		return (1 - abs(og[0]-center)/factor) * (1-abs(og[1]-center)/factor)
 
-	def upsample_kernel_1d(size):
+	def upsample_kernel_1d(self, size):
 		factor = (size + 1)//2
 		if size%2==1:
 			center = factor - 1
@@ -599,7 +605,7 @@ class bilinearUpSample(KLayer):
 		kernel = 1 - abs(og - center)/factor
 		return kernel
 
-	def upsample_kernel_3d(size):
+	def upsample_kernel_3d(self, size):
 		factor = (size + 1)//2
 		if size%2==1:
 			center = factor - 1
@@ -611,48 +617,48 @@ class bilinearUpSample(KLayer):
 
 	def get_kernel(self, dim, chn, factor):
 		filter_size = 2*factor - factor%2
-		shape = [filter_size] * (dim-2) + [num_featuremap, num_featuremap]
+		shape = [filter_size] * (dim-2) + [chn, chn]
 		weights = np.zeros(shape, dtype=np.float32)
 		if dim == 5:
-			k = upsample_kernel_3d(filter_size)
+			k = self.upsample_kernel_3d(filter_size)
 			for i in range(chn):
-				weights[:,:,:,i,i] = kernel
+				weights[:,:,:,i,i] = k
 		elif dim==4:
-			k = upsample_kernel(filter_size)
+			k = self.upsample_kernel(filter_size)
 			for i in range(chn):
-				weights[:,:,i,i] = kernel
+				weights[:,:,i,i] = k
 		elif dim==3:
-			k = upsample_kernel_1d(filter_size)
+			k = self.upsample_kernel_1d(filter_size)
 			for i in range(chn):
-				weights[:,i,i] = kernel
+				weights[:,i,i] = k
 		return weights
 
 	def build(self, input_shape):
 		self.dim = len(input_shape)
 		self.num_chn = input_shape[-1]
 		if self.dim==3:
-			self.outshape = [input_shape[0], input_shape[1]*self.factor, input_shape[2]]
+			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, input_shape[2]]
 		elif self.dim==4:
-			self.outshape = [input_shape[0], input_shape[1]*self.factor, input_shape[2]*self.factor, input_shape[3]]
+			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, input_shape[3]]
 		elif self.dim==5:
-			self.outshape = [input_shape[0], input_shape[1]*self.factor, input_shape[2]*self.factor, input_shape[3]*self.factor, input_shape[4]]
+			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
 		self.stride = [1] + [self.factor]*(self.dim-2) + [1]
-		kernel = self.get_kernel(self.dim, self.chn, self.factor)
+		kernel = self.get_kernel(self.dim, self.num_chn, self.factor)
 		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, initializer=tf.initializers.constant(kernel))
 
 	def call(self, x):
 		pad = [[0,0]] + [[1,1]]*(self.dim-2) + [[0,0]]
 		x = tf.pad(x, pad, mode='symmetric')
-
+		# print(self.outshape)
 		if self.dim==3:
 			res = tf.nn.conv1d_transpose(x, self.kernel, self.outshape, self.stride)
-			res = res[:, factor:-factor, :]
+			res = res[:, self.factor:-self.factor, :]
 		elif self.dim==4:
 			res = tf.nn.conv2d_transpose(x, self.kernel, self.outshape, self.stride)
-			res = res[:, factor:-factor, factor:-factor, :]
+			res = res[:, self.factor:-self.factor, self.factor:-self.factor, :]
 		elif self.dim==5:
 			res = tf.nn.conv3d_transpose(x, self.kernel, self.outshape, self.stride)
-			res = res[:, factor:-factor, factor:-factor, factor:-factor, :]
+			res = res[:, self.factor:-self.factor, self.factor:-self.factor, self.factor:-self.factor, :]
 		return res 
 
 @tf.custom_gradient

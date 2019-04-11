@@ -22,6 +22,10 @@ def accuracy(pred,y,name='acc', one_hot=True):
 	acc = tf.reduce_mean(tf.cast(correct,tf.float32))
 	return acc
 
+def weight_decay(wd, model):
+	w_reg = wd * 0.5 * sum([tf.reduce_sum(tf.square(w)) for w in model.trainable_variables]) 
+	return w_reg
+
 ################
 # dumb model declaration
 # make alias for init and call
