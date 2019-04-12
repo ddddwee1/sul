@@ -30,7 +30,7 @@ Examples in './example/'
 
 - Multi-GPU training
 
-- Object detection framework (on-going)
+- Single stage object detection framework
 
 ##### Note
 
