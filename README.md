@@ -31,3 +31,20 @@ Examples in './example/'
 - Multi-GPU training
 
 - Object detection framework (on-going)
+
+##### Note
+
+To install, run
+```
+pip install tf-nightly-gpu-2.0-preview
+```
+
+Remember to change registry if using Windows.
+
+1. Start the registry editor (regedit.exe)
+
+2. Navigate to HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem
+
+3. Double click LongPathsEnabled, set to 1 and click OK
+
+4. Reboot
