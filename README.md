@@ -24,13 +24,13 @@ Examples in './example/'
 
 - Graph Convolution Net (Kipf, Thomas N., and Max Welling. "Semi-supervised classification with graph convolutional networks." arXiv preprint arXiv:1609.02907 (2016))
 
+- Single stage object detection framework (Redmon, Joseph, and Ali Farhadi. "YOLO9000: better, faster, stronger." Proceedings of the IEEE conference on computer vision and pattern recognition. 2017)
+
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
 
 - Multi-GPU training
-
-- Single stage object detection framework
 
 ##### Note
 
