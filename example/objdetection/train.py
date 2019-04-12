@@ -1,3 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+
 import tensorflow as tf 
 import model3 as M 
 import numpy as np 
@@ -19,7 +22,7 @@ class Detector(M.Model):
 		return x 
 
 def conf_loss(fmap, label, mask):
-	weight = tf.stop_gradient(tf.abs(tf.sigmoid(fmap) - label))
+	weight = tf.stop_gradient(tf.square(tf.sigmoid(fmap) - label))
 	loss = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(logits=fmap, labels=label) * weight) / (tf.reduce_sum(weight) + 1e-5)
 	return loss 
 
@@ -44,7 +47,7 @@ def gradient_loss(x, model):
 		clsls = cls_loss(output[:,:,:,out_channel*5:], label[:,:,:,out_channel*5:], mask[:,:,:,out_channel*5:])
 		wd = 0.0005
 		w_reg = wd * 0.5 * sum([tf.reduce_sum(tf.square(w)) for w in model.trainable_variables]) 
-		loss_overall = confls * 2.0 + coordls * 0.5 + clsls * 1.0 + w_reg
+		loss_overall = confls * 10.0 + coordls * 5.0 + clsls * 1.0 + w_reg
 	grads = tape.gradient(loss_overall, model.trainable_variables)
 	return grads, [confls, coordls, clsls]
 
@@ -79,9 +82,11 @@ with tf.device('/cpu:0'):
 
 ##### single GPU training #####
 net = Detector()
-saver = M.Saver(net)
+saver = M.Saver(net.backbone)
 saver.restore('./pretrained_model/')
 opt = tf.optimizers.Adam(0.0001)
+saver = M.Saver(net, opt)
+saver.restore('./model/')
 for it in range(config.maxiter+1):
 	batch = reader.get_next()
 	grad, losses = gradient_loss(batch, net)
@@ -89,11 +94,11 @@ for it in range(config.maxiter+1):
 	if it%10==0:
 		confls, coordls, clsls = losses
 		print('ITER:%d\tConfLoss:%.4f\tCoordLoss:%.4f\tClassLoss:%.4f'%(it, confls, coordls, clsls))
-		output = net(batch[0]).numpy()
-		img_pred = data_reader.visualize(batch[0][0], output[0])
-		img_gt = data_reader.visualize(batch[0][0], batch[1][0])
-		cv2.imshow('imggt', img_gt)
-		cv2.imshow('imgpred', img_pred)
-		cv2.waitKey(5)
+		# output = net(batch[0]).numpy()
+		# img_pred = data_reader.visualize(batch[0][0], output[0])
+		# img_gt = data_reader.visualize(batch[0][0], batch[1][0])
+		# cv2.imshow('imggt', img_gt)
+		# cv2.imshow('imgpred', img_pred)
+		# cv2.waitKey(5)
 	if it%config.save_interval==0 and it>0:
 		saver.save('./model/%d.ckpt'%it)
