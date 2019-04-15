@@ -28,6 +28,8 @@ Examples in './example/'
 
 - Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
 
+- Object edge segmentation (No reference)
+
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
