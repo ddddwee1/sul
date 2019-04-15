@@ -26,6 +26,8 @@ Examples in './example/'
 
 - Single stage object detection framework (Redmon, Joseph, and Ali Farhadi. "YOLO9000: better, faster, stronger." Proceedings of the IEEE conference on computer vision and pattern recognition. 2017)
 
+- Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
+
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
