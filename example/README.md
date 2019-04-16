@@ -16,10 +16,16 @@
 
 - Graph Convolution Net (Kipf, Thomas N., and Max Welling. "Semi-supervised classification with graph convolutional networks." arXiv preprint arXiv:1609.02907 (2016))
 
+- Single stage object detection framework (Redmon, Joseph, and Ali Farhadi. "YOLO9000: better, faster, stronger." Proceedings of the IEEE conference on computer vision and pattern recognition. 2017)
+
+- OctConv (Chen, Yunpeng, et al. "Drop an Octave: Reducing Spatial Redundancy in Convolutional Neural Networks with Octave Convolution." arXiv preprint arXiv:1904.05049 (2019))
+
+- Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
+
+- Object edge segmentation (No reference)
+
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
 
 - Multi-GPU training
-
-- Object detection framework (on-going)

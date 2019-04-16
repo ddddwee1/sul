@@ -251,6 +251,70 @@ class GraphConvLayer(KModel):
 			x = self.act(x)
 		return x 
 
+class OctConv(M.Model):
+	def initialize(self, size, chn, ratio, input_ratio=None, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
+		chn_big = int(chn*ratio)
+		chn_small = chn - chn_big
+		self.avgpool = M.AvgPool(2)
+		self.upsample = M.BilinearUpSample(2)
+		self.Convhh = M.ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
+		self.Convhl = M.ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
+		self.Convlh = M.ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
+		self.Convll = M.ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
+
+		# bn and act
+		if batch_norm:
+			self.bn = L.batch_norm(values=values[idx:])
+		if activation!=-1:
+			self.act = L.activation(activation)
+
+		self.batch_norm = batch_norm
+		self.activation = activation
+		self.chn_inp_big = chn_inp_big
+		self.chn_inp_small = chn_inp_small
+		self.ratio = ratio
+		self.input_ratio = ratio if input_ratio is None else input_ratio
+	
+	def build(self, input_shape):
+		chn = input_shape[-1]
+		self.chn_inp_big = chn * self.input_ratio / (1 + self.input_ratio*3)
+		self.chn_inp_small = chn - self.chn_inp_big
+
+	def forward(self, x):
+		big = x[:self.chn_inp_big*4]
+		small = x[self.chn_inp_big*4:]
+		big = tf.nn.depth_to_space(big, 2)
+
+		hh = self.Convhh(big)
+		ll = self.Convll(small)
+
+		hl = self.avgpool(big)
+		hl = self.Convhl(hl)
+		
+		lh = self.Convlh(small)
+		lh = self.upsample(lh)
+
+		h_out = hh + lh
+		h_out = tf.nn.space_to_depth(h_out, 2) 
+		l_out = ll + hl
+		out = tf.concat([h_out, l_out], axis=-1)
+		if self.batch_norm:
+			out = self.bn(out)
+		if self.activation!=-1:
+			out = self.act(out)
+		return out 
+
+class OctMerge(M.Model):
+	def initialize(self):
+		self.avgpool = M.AvgPool(2)
+	def forward(self,x):
+		h = x 
+		l = self.avgpool(x)
+		h = tf.nn.space_to_depth(h, 2)
+		out = tf.concat([h,l], axis=-1)
+		return out 
+
+
 ###############
 # alias for layers
 AvgPool = L.avgpoolLayer
