@@ -251,38 +251,36 @@ class GraphConvLayer(KModel):
 			x = self.act(x)
 		return x 
 
-class OctConv(M.Model):
+class OctConv(Model):
 	def initialize(self, size, chn, ratio, input_ratio=None, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
 		chn_big = int(chn*ratio)
 		chn_small = chn - chn_big
-		self.avgpool = M.AvgPool(2)
-		self.upsample = M.BilinearUpSample(2)
-		self.Convhh = M.ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
-		self.Convhl = M.ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
-		self.Convlh = M.ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
-		self.Convll = M.ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
+		self.avgpool = AvgPool(2,2)
+		self.upsample = BilinearUpSample(2)
+		self.Convhh = ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
+		self.Convhl = ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
+		self.Convlh = ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
+		self.Convll = ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
 
 		# bn and act
 		if batch_norm:
-			self.bn = L.batch_norm(values=values[idx:])
+			self.bn = L.batch_norm()
 		if activation!=-1:
 			self.act = L.activation(activation)
 
 		self.batch_norm = batch_norm
 		self.activation = activation
-		self.chn_inp_big = chn_inp_big
-		self.chn_inp_small = chn_inp_small
 		self.ratio = ratio
 		self.input_ratio = ratio if input_ratio is None else input_ratio
 	
 	def build(self, input_shape):
 		chn = input_shape[-1]
-		self.chn_inp_big = chn * self.input_ratio / (1 + self.input_ratio*3)
+		self.chn_inp_big = int(chn * self.input_ratio / (1 + self.input_ratio*3))
 		self.chn_inp_small = chn - self.chn_inp_big
 
 	def forward(self, x):
-		big = x[:self.chn_inp_big*4]
-		small = x[self.chn_inp_big*4:]
+		big = x[:,:,:,:self.chn_inp_big*4]
+		small = x[:,:,:,self.chn_inp_big*4:]
 		big = tf.nn.depth_to_space(big, 2)
 
 		hh = self.Convhh(big)
@@ -304,9 +302,9 @@ class OctConv(M.Model):
 			out = self.act(out)
 		return out 
 
-class OctMerge(M.Model):
+class OctMerge(Model):
 	def initialize(self):
-		self.avgpool = M.AvgPool(2)
+		self.avgpool = AvgPool(2,2)
 	def forward(self,x):
 		h = x 
 		l = self.avgpool(x)

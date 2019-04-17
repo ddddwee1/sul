@@ -44,14 +44,14 @@ class HeadBlock(M.Model):
 
 class ResNet(M.Model):
 	def initialize(self, channel_list, blocknum_list, embedding_size, oct_ratio, embedding_bn=True):
-		self.head = HeadBlock(channel_list[0], size=7, stride=2)
+		self.head = HeadBlock(channel_list[0], size=3, stride=1, maxpool=False)
 		self.pre_oct = M.OctMerge()
 		if oct_ratio!=0.5:
 			self.c0 = M.OctConv(1, channel_list[0], oct_ratio, 0.5)
 		self.body = []
-		for num, chn in zip(blocknum_list, channel_list[1:]):
+		for i_blk, (num, chn) in enumerate(zip(blocknum_list, channel_list[1:])):
 			for i in range(num):
-				self.body.append(ResBlock_v1(chn, 2 if i==0 else 1, oct_ratio))
+				self.body.append(ResBlock_v1(chn, 2 if (i==0 and i_blk>0) else 1, oct_ratio))
 		self.emb_bn = M.BatchNorm()
 		self.embedding = M.Dense(embedding_size, batch_norm=embedding_bn)
 
