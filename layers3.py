@@ -637,11 +637,11 @@ class bilinearUpSample(KLayer):
 		self.dim = len(input_shape)
 		self.num_chn = input_shape[-1]
 		if self.dim==3:
-			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, input_shape[2]]
+			self.outshape = [None, (input_shape[1]+2)*self.factor, input_shape[2]]
 		elif self.dim==4:
-			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, input_shape[3]]
+			self.outshape = [None, (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, input_shape[3]]
 		elif self.dim==5:
-			self.outshape = [input_shape[0], (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
+			self.outshape = [None, (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
 		self.stride = [1] + [self.factor]*(self.dim-2) + [1]
 		kernel = self.get_kernel(self.dim, self.num_chn, self.factor)
 		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, initializer=tf.initializers.constant(kernel))
@@ -649,6 +649,7 @@ class bilinearUpSample(KLayer):
 	def call(self, x):
 		pad = [[0,0]] + [[1,1]]*(self.dim-2) + [[0,0]]
 		x = tf.pad(x, pad, mode='symmetric')
+		self.outshape[0] = x.get_shape().as_list()[0]
 		# print(self.outshape)
 		if self.dim==3:
 			res = tf.nn.conv1d_transpose(x, self.kernel, self.outshape, self.stride)

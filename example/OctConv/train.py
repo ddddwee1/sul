@@ -8,18 +8,19 @@ import time
 
 class FaceResNet(M.Model):
 	def initialize(self, num_classes):
-		self.resnet = resnet.ResNet([64,64,128,256,512], [3, 4, 14, 3], 512, 0.125)
+		self.resnet = resnet.ResNet([64,64,128,256,512], [3, 4, 14, 3], 512, 0.75)
 		self.classifier = losspart.MarginalCosineLayer(num_classes)
 
 	def forward(self, x, label):
+		# x = tf.image.resize(x, [128,128])
 		feat = self.resnet(x)
 		# feat = tf.nn.dropout(feat, 0.4)
-		logits = self.classifier(feat, label, 1.0, 0.5, 0.0)
+		logits = self.classifier(feat, label, 1.0, 0.2, 0.0)
 		logits = logits * 64
 		return logits
 
-BSIZE = 420
-EPOCH = 6
+BSIZE = 260 - 4
+EPOCH = 30
 data_reader = datareader.DataReader('img_list.txt', BSIZE)
 tf.keras.backend.set_learning_phase(True)
 
@@ -37,7 +38,7 @@ def grad_loss(x, model):
 # monitoring time
 t0 = time.time()
 # batch = data_reader.get_next()
-LRV = 0.01
+LRV = 0.001
 with tf.device('/cpu:0'):
 	model = FaceResNet(data_reader.max_label + 1)
 	LR = tf.Variable(LRV, trainable=False)
@@ -51,6 +52,9 @@ with tf.device('/cpu:0'):
 	pt = M.ParallelTraining(model, optimizer, [0,1,2,3], grad_loss_fn=grad_loss) 
 
 	for ep in range(EPOCH):
+		if ep==1:
+			LRV = 0.1
+			LR.assign(LRV)
 		if ep in [8,12,16]:
 			LRV *= 0.1 
 			LR.assign(LRV)

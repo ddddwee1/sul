@@ -27,6 +27,31 @@ class ResBlock_v1(M.Model):
 		res = res + sc 
 		return res 
 
+class ResBlock_normal(M.Model):
+	def initialize(self, outchn, stride, bottle_neck=False):
+		self.stride = stride
+		self.outchn = outchn
+		self.bn1 = M.BatchNorm()
+		self.c1 = M.ConvLayer(3, outchn, activation=M.PARAM_LRELU, usebias=False, batch_norm=True)
+		self.c2 = M.ConvLayer(3, outchn, stride=stride, usebias=False, batch_norm=True)
+		# shortcut 
+		self.sc = M.ConvLayer(1, outchn, stride=stride, usebias=False, batch_norm=True)
+
+	def build(self, input_shape):
+		self.inchn = input_shape[-1]
+
+	def forward(self, x):
+		res = self.bn1(x)
+		res = self.c1(res)
+		res = self.c2(res)
+		# shortcut 
+		if self.inchn==self.outchn and self.stride==1:
+			sc = x 
+		else:
+			sc = self.sc(x)
+		res = res + sc 
+		return res 
+
 class HeadBlock(M.Model):
 	def initialize(self, outchn, size=3, stride=1, maxpool=True):
 		self.c1 = M.ConvLayer(size, outchn, stride, usebias=False, activation=M.PARAM_LRELU, batch_norm=True)
@@ -42,6 +67,23 @@ class HeadBlock(M.Model):
 			x = self.mxpool(x)
 		return x
 
+class OctSplit(M.Model):
+	def initialize(self, ratio):
+		self.ratio = ratio
+	def build(self, input_shape):
+		self.imgsize = int(input_shape[1])
+		chn = int(input_shape[-1])
+		self.chn = chn
+		self.chn_inp_big = int(chn * self.ratio / (1 + self.ratio*3))
+		self.chn_inp_small = chn - self.chn_inp_big
+	def forward(self, x):
+		big = x[:,:,:,:self.chn_inp_big*4]
+		small = x[:,:,:,self.chn_inp_big*4:]
+		big = tf.reshape(big, [-1, self.imgsize*2, self.imgsize*2, self.chn_inp_big])
+		big = tf.nn.space_to_depth(big, 2)
+		res = tf.concat([big, small], axis=-1)
+		return res 
+
 class ResNet(M.Model):
 	def initialize(self, channel_list, blocknum_list, embedding_size, oct_ratio, embedding_bn=True):
 		self.head = HeadBlock(channel_list[0], size=3, stride=1, maxpool=False)
@@ -51,7 +93,14 @@ class ResNet(M.Model):
 		self.body = []
 		for i_blk, (num, chn) in enumerate(zip(blocknum_list, channel_list[1:])):
 			for i in range(num):
-				self.body.append(ResBlock_v1(chn, 2 if (i==0 and i_blk>0) else 1, oct_ratio))
+				if i_blk==3:
+					if i==0:
+						self.body.append(OctSplit(oct_ratio))
+					blk = ResBlock_normal(chn, 1)
+				else:
+					blk = ResBlock_v1(chn, 2 if (i==0) else 1, oct_ratio)
+				self.body.append(blk)
+
 		self.emb_bn = M.BatchNorm()
 		self.embedding = M.Dense(embedding_size, batch_norm=embedding_bn)
 
@@ -64,6 +113,7 @@ class ResNet(M.Model):
 			x = self.c0(x)
 		for block in self.body:
 			x = block(x)
+		print(x.shape)
 		x = M.flatten(x)
 		x = self.emb_bn(x)
 		if tf.keras.backend.learning_phase():

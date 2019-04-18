@@ -256,7 +256,6 @@ class OctConv(Model):
 		chn_big = int(chn*ratio)
 		chn_small = chn - chn_big
 		self.avgpool = AvgPool(2,2)
-		self.upsample = BilinearUpSample(2)
 		self.Convhh = ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
 		self.Convhl = ConvLayer(size, chn_small, stride=stride, pad=pad, usebias=usebias)
 		self.Convlh = ConvLayer(size, chn_big, stride=stride, pad=pad, usebias=usebias)
@@ -272,16 +271,20 @@ class OctConv(Model):
 		self.activation = activation
 		self.ratio = ratio
 		self.input_ratio = ratio if input_ratio is None else input_ratio
+		self.stride = stride
+		self.chn_big = chn_big
 	
 	def build(self, input_shape):
+		self.imgsize = int(input_shape[1])
 		chn = input_shape[-1]
+		self.chn = chn 
 		self.chn_inp_big = int(chn * self.input_ratio / (1 + self.input_ratio*3))
 		self.chn_inp_small = chn - self.chn_inp_big
 
 	def forward(self, x):
 		big = x[:,:,:,:self.chn_inp_big*4]
 		small = x[:,:,:,self.chn_inp_big*4:]
-		big = tf.nn.depth_to_space(big, 2)
+		big = tf.reshape(big, [-1, self.imgsize*2, self.imgsize*2, self.chn_inp_big])
 
 		hh = self.Convhh(big)
 		ll = self.Convll(small)
@@ -290,10 +293,10 @@ class OctConv(Model):
 		hl = self.Convhl(hl)
 		
 		lh = self.Convlh(small)
-		lh = self.upsample(lh)
+		lh = tf.image.resize(lh, [self.imgsize*2//self.stride, self.imgsize*2//self.stride], tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
 		h_out = hh + lh
-		h_out = tf.nn.space_to_depth(h_out, 2) 
+		h_out = tf.reshape(h_out, [-1, self.imgsize//self.stride, self.imgsize//self.stride, self.chn_big*4])
 		l_out = ll + hl
 		out = tf.concat([h_out, l_out], axis=-1)
 		if self.batch_norm:
@@ -305,10 +308,13 @@ class OctConv(Model):
 class OctMerge(Model):
 	def initialize(self):
 		self.avgpool = AvgPool(2,2)
+	def build(self, input_shape):
+		self.imgsize = int(input_shape[1])
+		self.chn = int(input_shape[3])
 	def forward(self,x):
 		h = x 
 		l = self.avgpool(x)
-		h = tf.nn.space_to_depth(h, 2)
+		h = tf.reshape(h, [-1, self.imgsize//2, self.imgsize//2, self.chn*4])
 		out = tf.concat([h,l], axis=-1)
 		return out 
 

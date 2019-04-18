@@ -7,6 +7,7 @@ def adjust_img(img):
 	# a = np.random.randint(2)
 	# if a==1:
 	# 	img = np.flip(img, axis=1)
+	# img = cv2.resize(img,(128,128))
 	return img 
 
 def process(batch, max_label):
