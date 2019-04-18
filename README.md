@@ -38,7 +38,7 @@ Examples in './example/'
 
 - Multi-GPU training
 
-##### Note
+#### Note
 
 To install, run
 ```
@@ -54,3 +54,9 @@ Remember to change registry if using Windows.
 3. Double click LongPathsEnabled, set to 1 and click OK
 
 4. Reboot
+
+#### Legacy 
+
+SUL1 for Tensorflow 1.x
+
+SUL2 for Tensorflow >= 1.12
