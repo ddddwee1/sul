@@ -67,23 +67,6 @@ class HeadBlock(M.Model):
 			x = self.mxpool(x)
 		return x
 
-class OctSplit(M.Model):
-	def initialize(self, ratio):
-		self.ratio = ratio
-	def build(self, input_shape):
-		self.imgsize = int(input_shape[1])
-		chn = int(input_shape[-1])
-		self.chn = chn
-		self.chn_inp_big = int(chn * self.ratio / (1 + self.ratio*3))
-		self.chn_inp_small = chn - self.chn_inp_big
-	def forward(self, x):
-		big = x[:,:,:,:self.chn_inp_big*4]
-		small = x[:,:,:,self.chn_inp_big*4:]
-		big = tf.reshape(big, [-1, self.imgsize*2, self.imgsize*2, self.chn_inp_big])
-		big = tf.nn.space_to_depth(big, 2)
-		res = tf.concat([big, small], axis=-1)
-		return res 
-
 class ResNet(M.Model):
 	def initialize(self, channel_list, blocknum_list, embedding_size, oct_ratio, embedding_bn=True):
 		self.head = HeadBlock(channel_list[0], size=3, stride=1, maxpool=False)
@@ -95,7 +78,7 @@ class ResNet(M.Model):
 			for i in range(num):
 				if i_blk==3:
 					if i==0:
-						self.body.append(OctSplit(oct_ratio))
+						self.body.append(M.OctSplit(oct_ratio))
 					blk = ResBlock_normal(chn, 1)
 				else:
 					blk = ResBlock_v1(chn, 2 if (i==0) else 1, oct_ratio)

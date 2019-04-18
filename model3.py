@@ -318,6 +318,22 @@ class OctMerge(Model):
 		out = tf.concat([h,l], axis=-1)
 		return out 
 
+class OctSplit(Model):
+	def initialize(self, ratio):
+		self.ratio = ratio
+	def build(self, input_shape):
+		self.imgsize = int(input_shape[1])
+		chn = int(input_shape[-1])
+		self.chn = chn
+		self.chn_inp_big = int(chn * self.ratio / (1 + self.ratio*3))
+		self.chn_inp_small = chn - self.chn_inp_big
+	def forward(self, x):
+		big = x[:,:,:,:self.chn_inp_big*4]
+		small = x[:,:,:,self.chn_inp_big*4:]
+		big = tf.reshape(big, [-1, self.imgsize*2, self.imgsize*2, self.chn_inp_big])
+		big = tf.nn.space_to_depth(big, 2)
+		res = tf.concat([big, small], axis=-1)
+		return res 
 
 ###############
 # alias for layers
