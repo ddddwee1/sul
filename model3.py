@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np 
 import os 
 from tensorflow.keras import Model as KModel
+import random
 
 # activation const
 PARAM_RELU = 0
