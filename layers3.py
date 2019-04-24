@@ -450,7 +450,7 @@ class fcLayer(KLayer):
 		return res 
 
 class batch_norm(KLayer):
-	def __init__(self, decay=0.01, epsilon=1e-5, is_training=None, values=None):
+	def __init__(self, decay=0.001, epsilon=1e-5, is_training=None, values=None):
 		super(batch_norm, self).__init__()
 
 		self.decay = decay
