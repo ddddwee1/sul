@@ -336,6 +336,72 @@ class OctSplit(Model):
 		res = tf.concat([big, small], axis=-1)
 		return res 
 
+class MarginalCosineLayer(Model):
+	def initialize(self, num_classes):
+		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
+	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
+		# res = cos(m1t + m2) + m3
+		# this loss will cause potential unstable
+		label = tf.convert_to_tensor(label)
+		x = tf.nn.l2_normalize(x, axis=1)
+		x = self.classifier(x)
+		if not(m1==1.0 and m2==0.0):
+			t = tf.gather_nd(x, indices=tf.where(label>0.)) #shape: [N]
+			t = tf.math.acos(t)
+			### original ###
+			# if m1!=1.0:
+			# 	t = t*m1
+			# if m2!=0.0:
+			# 	t = t+m2 
+			### end ###
+			### experimental: to limit the value not exceed pi ###
+			if m1!=1.0:
+				t = t*m1
+				t1 = t * np.pi / tf.stop_gradient(t)
+				t = tf.minimum(t,t1)
+			if m2!=0.0:
+				t = t+m2 
+				t1 = t + np.pi - tf.stop_gradient(t)
+				t = tf.minimum(t,t1)
+			t = tf.math.cos(t)
+			t = tf.expand_dims(t, axis=1)
+			x = x*(1-label) + t*label
+		x = x - label * m3
+		return x
+
+class QAttention(Model):
+	def initialize(self, outdim):
+		self.qe = L.fcLayer(outdim, usebias=False, norm=False)
+	def forward(self, feature, query):
+		query = tf.convert_to_tensor(query)
+		def Qatt_batch(feat, q):
+			q = tf.expand_dims(q,axis=0)
+			e = tf.matmul(feat, q, transpose_b=True) # [featsize, 1]
+			e = tf.nn.softmax(e)
+			out = e * feat
+			out = tf.reduce_mean(out,0)
+			return out
+		result =  tf.map_fn(lambda x:Qatt_batch(x[0],x[1]) , (feature, query), dtype=tf.float32)
+		return result
+
+class SelfAttention(Model):
+	def initialize(self, att_num, outnum, residual=True):
+		self.layerf = L.fcLayer(att_num)
+		self.layerg = L.fcLayer(att_num)
+		self.layerh = L.fcLayer(att_num)
+		self.residual = residual
+
+	def forward(self, x):
+		f = self.layerf(x)
+		g = self.layerg(x)
+		h = self.layerh(x)
+		att = tf.matmul(f, g, transpose_b=True)
+		att = tf.nn.softmax(att, -1)
+		out = tf.matmul(att, x)
+		if self.residual:
+			out = out + x
+		return out 
+
 ###############
 # alias for layers
 AvgPool = L.avgpoolLayer
