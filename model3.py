@@ -388,7 +388,7 @@ class SelfAttention(Model):
 	def initialize(self, att_num, outnum, residual=True):
 		self.layerf = L.fcLayer(att_num)
 		self.layerg = L.fcLayer(att_num)
-		self.layerh = L.fcLayer(att_num)
+		self.layerh = L.fcLayer(outnum)
 		self.residual = residual
 
 	def forward(self, x):
