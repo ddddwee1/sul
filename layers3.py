@@ -164,7 +164,7 @@ class conv1D(KLayer):
 
 class deconv1D(KLayer):
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
-		super(conv1D, self).__init__()
+		super(deconv1D, self).__init__()
 		self.size = size
 		self.outchn = outchn
 		self.stride = stride
@@ -210,7 +210,7 @@ class deconv1D(KLayer):
 
 class deconv2D(KLayer):
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
-		super(conv2D, self).__init__()
+		super(deconv2D, self).__init__()
 		self.size = size
 		self.outchn = outchn
 		self.stride = stride
@@ -223,9 +223,9 @@ class deconv2D(KLayer):
 		# set size
 		inchannel = input_shape[-1]
 		if isinstance(self.size,list):
-			self.size = [self.size[0],self.size[1],inchannel,self.outchn]
+			self.size = [self.size[0],self.size[1],self.outchn,inchannel]
 		else:
-			self.size = [self.size, self.size, inchannel, self.outchn]
+			self.size = [self.size, self.size, self.outchn, inchannel]
 		# set stride
 		if isinstance(self.stride,list):
 			self.stride = [1,self.stride[0],self.stride[1],1]
@@ -239,9 +239,9 @@ class deconv2D(KLayer):
 
 		# compute output shape
 		if self.pad=='SAME':
-			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]*self.stride[2], input_shape[3]]
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]*self.stride[2], self.outchn]
 		else:
-			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]*self.stride[2]+self.size[2]-self.stride[2], input_shape[3]]
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]*self.stride[2]+self.size[2]-self.stride[2], self.outchn]
 
 	def build(self, input_shape):
 		values = self.values
@@ -258,7 +258,7 @@ class deconv2D(KLayer):
 		
 	def call(self, x):
 		# x = tf.expand_dims(x, axis=1)
-		out = tf.nn.conv2d_transpose(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
+		out = tf.nn.conv2d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
 			out = tf.nn.bias_add(out,self.bias)
 		# out = tf.squeeze(out, axis=1)
@@ -450,7 +450,7 @@ class fcLayer(KLayer):
 		return res 
 
 class batch_norm(KLayer):
-	def __init__(self, decay=0.001, epsilon=1e-5, is_training=None, values=None):
+	def __init__(self, decay=1e-2, epsilon=1e-5, is_training=None, values=None):
 		super(batch_norm, self).__init__()
 
 		self.decay = decay

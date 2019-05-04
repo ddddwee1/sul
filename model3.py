@@ -183,7 +183,7 @@ class DeconvLayer(KModel):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if batch_norm:
-			self.bn = L.batch_norm
+			self.bn = L.batch_norm()
 		if activation!=-1:
 			self.act = L.activation(activation)
 
