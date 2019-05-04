@@ -20,6 +20,8 @@
 
 - OctConv (Chen, Yunpeng, et al. "Drop an Octave: Reducing Spatial Redundancy in Convolutional Neural Networks with Octave Convolution." arXiv preprint arXiv:1904.05049 (2019))
 
+- 2D Human Pose Detector (Xiao, Bin, Haiping Wu, and Yichen Wei. "Simple baselines for human pose estimation and tracking." Proceedings of the European Conference on Computer Vision (ECCV). 2018)
+
 - Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
 
 - Object edge segmentation (No reference)
