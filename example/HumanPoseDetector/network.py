@@ -77,4 +77,7 @@ class PosePredNet(M.Model):
 		x = self.head(x)
 		x = self.lastlayer(x)
 		return x 
-
+	def norm(self,x):
+		return x - np.array([[[123.68, 116.78, 103.94]]])
+	def denorm(self,x):
+		return x + np.array([[[123.68, 116.78, 103.94]]])

@@ -145,7 +145,7 @@ class ConvLayer1D(KModel):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if batch_norm:
-			self.bn = L.batch_norm
+			self.bn = L.batch_norm()
 		if activation!=-1:
 			self.act = L.activation(activation)
 
@@ -164,7 +164,7 @@ class DeconvLayer1D(KModel):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if batch_norm:
-			self.bn = L.batch_norm
+			self.bn = L.batch_norm()
 		if activation!=-1:
 			self.act = L.activation(activation)
 
@@ -202,7 +202,7 @@ class DeconvLayer3D(KModel):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if batch_norm:
-			self.bn = L.batch_norm
+			self.bn = L.batch_norm()
 		if activation!=-1:
 			self.act = L.activation(activation)
 
