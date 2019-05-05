@@ -71,8 +71,11 @@ class PosePredNet(M.Model):
 	def initialize(self, num_pts):
 		self.backbone = ResNet([64,256,512,1024, 2048], [3,4,6,3])
 		self.head = TransposeLayers(256)
-		self.lastlayer = M.ConvLayer(1, 17)
-	def forward(self, x):
+		self.lastlayer = M.ConvLayer(1, num_pts)
+		self.norm_vec = tf.convert_to_tensor(np.float32([[[123.68, 116.78, 103.94]]]))
+	def forward(self, x, norm=True):
+		if norm:
+			x = x - self.norm_vec
 		x = self.backbone(x)
 		x = self.head(x)
 		x = self.lastlayer(x)
