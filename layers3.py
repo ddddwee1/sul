@@ -257,6 +257,7 @@ class deconv2D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
+		self.outshape[0] = x.get_shape().as_list()[0]
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv2d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:

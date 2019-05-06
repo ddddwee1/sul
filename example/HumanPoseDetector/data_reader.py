@@ -67,7 +67,7 @@ def process(data):
 		# print(label)
 		label = draw_gaussian(label, [64,64], down_sample=4)
 		# apply occlusion mask
-		label = label * mask
+		label = label * mask *255
 		
 		batch.append([img, label])
 	batch = list(zip(*batch))
