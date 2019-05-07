@@ -76,6 +76,19 @@ class ETA():
 			return h,m,s
 
 ################
+class EMAMeter():
+	def __init__(self, alpha):
+		self.alpha = alpha
+		self.value = None
+
+	def update(self, value):
+		if self.value is None:
+			self.value = value
+		else:
+			self.value = self.value * self.alpha + value * (1-self.alpha)
+		return self.value
+
+################
 # Layer Class 
 
 class ConvLayer(KModel):
