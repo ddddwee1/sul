@@ -576,7 +576,7 @@ class ParallelTraining():
 				print('GPU:%d'%i)
 		losses = []
 		grads = [i[0] for i in rr]
-		grads = [sum(g) for g in zip(*grads)]
+		grads = [sum(g)/len(g) for g in zip(*grads)]
 		for i in rr:
 			losses.append(i[1])
 		self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
