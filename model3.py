@@ -606,6 +606,19 @@ class ParallelTraining():
 			res.append(buff)
 		return res 
 
+######## LR Scheduler ########
+class LRScheduler(tf.keras.optimizers.schedules.LearningRateSchedule):
+	def __init__(self, fn):
+		super(LRScheduler, self).__init__()
+		self.schedule_fn = fn 
+
+	def __call__(self, step):
+		lr = self.schedule_fn(step)
+		return lr 
+
+	def get_config(self):
+		return {'lr_fn':self.schedule_fn}
+
 ###############
 gradient_reverse = L.gradient_reverse
 
