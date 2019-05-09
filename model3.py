@@ -429,6 +429,55 @@ class SelfAttention(Model):
 			out = out + x
 		return out 
 
+class LSTMCell(Model):
+	def initialize(self, outdim):
+		self.F = L.fcLayer(outdim, usebias=False, norm=False)
+		self.O = L.fcLayer(outdim, usebias=False, norm=False)
+		self.I = L.fcLayer(outdim, usebias=False, norm=False)
+		self.C = L.fcLayer(outdim, usebias=False, norm=False)
+
+		self.hF = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hO = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hI = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hC = L.fcLayer(outdim, usebias=False, norm=False)
+
+	def forward(self, x, h, c_prev):
+		h = tf.convert_to_tensor(h)
+		f = self.F(x) + self.hF(h)
+		o = self.O(x) + self.hO(h)
+		i = self.I(x) + self.hI(h)
+		c = self.C(x) + self.hC(h)
+
+		f_ = tf.math.sigmoid(f)
+		c_ = tf.math.tanh(x) * tf.math.sigmoid(i)
+		o_ = tf.math.sigmoid(o)
+
+		next_c = c_prev * f_ + c_ 
+		next_h = o_ * tf.math.tanh(next_c)
+		return next_h, next_c
+
+class LSTM(Model):
+	def initialize(self, outdim):
+		self.LSTM = LSTMCell(outdim)
+		self.h = None 
+		self.c = None 
+	def forward(self, x):
+		assert x[0] is not None, 'First element should not be None'
+		outs = [] 
+		for i in range(len(x)):
+			next_inp = x[i]
+			if next_inp is None:
+				next_inp = tf.stop_gradient(h_next)
+			else:
+				next_inp = tf.convert_to_tensor(next_inp)
+			if self.h is None:
+				self.h = tf.zeros_like(next_inp)
+			if self.c is None:
+				self.c = tf.zeros_like(next_inp)
+			self.h, self.c = self.LSTM(next_inp, self.h, self.c)
+			outs.append(self.h)
+		return outs 
+
 ###############
 # alias for layers
 AvgPool = L.avgpoolLayer
