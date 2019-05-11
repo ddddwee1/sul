@@ -449,7 +449,7 @@ class LSTMCell(Model):
 		c = self.C(x) + self.hC(h)
 
 		f_ = tf.math.sigmoid(f)
-		c_ = tf.math.tanh(x) * tf.math.sigmoid(i)
+		c_ = tf.math.tanh(c) * tf.math.sigmoid(i)
 		o_ = tf.math.sigmoid(o)
 
 		next_c = c_prev * f_ + c_ 
