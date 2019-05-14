@@ -663,6 +663,23 @@ class bilinearUpSample(KLayer):
 			res = res[:, self.factor:-self.factor, self.factor:-self.factor, self.factor:-self.factor, :]
 		return res 
 
+class NALU(KLayer):
+	def __init__(self, outdim):
+		super(NALU, self).__init__()
+		self.outdim = outdim
+	def build(self, input_shape):
+		indim = input_shape[-1]
+		self.W = self.add_variable('W', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
+		self.M = self.add_variable('M', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
+		self.G = self.add_variable('G', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
+	def call(self,x):
+		W = tf.tanh(self.W) * tf.sigmoid(self.M)
+		g = tf.sigmoid(tf.matmul(x, self.G))
+		m = tf.exp(tf.matmul(tf.log(tf.abs(x) + 1e-8), W))
+		a = tf.matmul(x, W)
+		out = g*a + (1.-g)*m
+		return out 
+
 @tf.custom_gradient
 def gradient_reverse(x):
 	def grad(dy):

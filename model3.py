@@ -478,6 +478,7 @@ class LSTM(Model):
 			outs.append(self.h)
 		return outs 
 
+
 ###############
 # alias for layers
 AvgPool = L.avgpoolLayer
@@ -488,6 +489,7 @@ BatchNorm = L.batch_norm
 DeconvLayer2D = DeconvLayer
 ConvLayer2D = ConvLayer
 BilinearUpSample = L.bilinearUpSample
+NALU = L.NALU
 
 ###############
 # Saver 
