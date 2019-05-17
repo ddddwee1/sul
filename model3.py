@@ -27,6 +27,11 @@ def weight_decay(wd, model):
 	w_reg = wd * 0.5 * sum([tf.reduce_sum(tf.square(w)) for w in model.trainable_variables]) 
 	return w_reg
 
+def weight_decay_v2(wd, model):
+	ws = [w for w in model.trainable_variables if 'kernel' in w.name]
+	w_reg = wd * 0.5 * sum([tf.reduce_sum(tf.square(w)) for w in ws]) 
+	return w_reg
+
 def spectrum_regularizer(kernel, cutoff_ratio=0.5, size=50, filter_type='high'):
 	assert filter_type in ['high','low']
 	s = tf.signal.rfft2d(k, fft_length=[size,size])
