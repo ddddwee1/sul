@@ -8,6 +8,10 @@ Now updated to SUL3.0 for tf2
 
 Examples in './example/'
 
+## Documentation
+
+[The documentation can be viewed here.](https://sul.readthedocs.io/en/latest/)
+
 ### Projects
 
 - ArcFace (Deng, Jiankang, et al. "Arcface: Additive angular margin loss for deep face recognition." arXiv preprint arXiv:1801.07698 (2018))
