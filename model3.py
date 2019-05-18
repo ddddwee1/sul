@@ -232,7 +232,37 @@ class ConvLayer(KModel):
 		return x 
 
 class ConvLayer3D(KModel):
+	"""
+	High-level convolution 3D layer
+	"""
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True, values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+
+		:param activation: Same candidates as layers3.activate
+
+		:type batch_norm: bool
+		:param batch_norm: Whether to use batch normalization in this layer.
+		"""
 		super(ConvLayer3D, self).__init__()
 		self.batch_norm = batch_norm
 		self.activation = activation
@@ -254,6 +284,11 @@ class ConvLayer3D(KModel):
 			self.act = L.activation(activation)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		
+		:return: Tensor or a list of tensor.
+		"""
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
@@ -262,7 +297,34 @@ class ConvLayer3D(KModel):
 		return x 
 
 class ConvLayer1D(KModel):
+	"""
+	High-level convolution 1D layer
+	"""
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:param activation: Same candidates as layers3.activate
+
+		:type batch_norm: bool
+		:param batch_norm: Whether to use batch normalization in this layer.
+		"""
 		super(ConvLayer1D, self).__init__()
 		self.conv = L.conv1D(size, outchn, stride, pad, dilation_rate, usebias)
 		self.batch_norm = batch_norm
@@ -273,6 +335,11 @@ class ConvLayer1D(KModel):
 			self.act = L.activation(activation)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		
+		:return: Tensor or a list of tensor.
+		"""
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
