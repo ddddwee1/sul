@@ -1,0 +1,299 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>layers3.Layer &mdash; sul  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="layers3.conv1D" href="layers3.conv1D.html" />
+    <link rel="prev" title="Layers" href="../layer.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> sul
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../layer.html">Layers</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">layers3.Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.conv1D.html">layers3.conv1D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.conv2D.html">layers3.conv2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.conv3D.html">layers3.conv3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.deconv1D.html">layers3.deconv1D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.deconv2D.html">layers3.deconv2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.deconv3D.html">layers3.deconv3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.maxpoolLayer.html">layers3.maxpoolLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.avgpoolLayer.html">layers3.avgpoolLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.globalAvgpoolLayer.html">layers3.globalAvgpoolLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.activation.html">layers3.activation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.fcLayer.html">layers3.fcLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.batch_norm.html">layers3.batch_norm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.flatten.html">layers3.flatten</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.graphConvLayer.html">layers3.graphConvLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.bilinearUpSample.html">layers3.bilinearUpSample</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.NALU.html">layers3.NALU</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../model.html">Model</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sul</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../layer.html">Layers</a> &raquo;</li>
+        
+      <li>layers3.Layer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/stubs/layers3.Layer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="layers3-layer">
+<h1>layers3.Layer<a class="headerlink" href="#layers3-layer" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="layers3.Layer">
+<em class="property">class </em><code class="descclassname">layers3.</code><code class="descname">Layer</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Layer template. Implement some basic functions by override initialize, build and forward.</p>
+<dl class="method">
+<dt id="layers3.Layer.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default initialization. Not recommended to touch.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="layers3.Layer.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>input_shape</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the variables of the layer (optional, for subclass implementers).</p>
+<p>This is a method that implementers of subclasses of <cite>Layer</cite> or <cite>Model</cite>
+can override if they need a state-creation step in-between
+layer instantiation and layer call.</p>
+<p>This is typically used to create the weights of <cite>Layer</cite> subclasses.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_shape</strong> – Instance of <cite>TensorShape</cite>, or list of instances of
+<cite>TensorShape</cite> if the layer expects a list of inputs
+(one instance per input).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="layers3.Layer.call">
+<code class="descname">call</code><span class="sig-paren">(</span><em>x</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer.call" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is where the layer’s logic lives.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>inputs</strong> – Input tensor, or list/tuple of input tensors.</li>
+<li><strong>**kwargs</strong> – Additional keyword arguments.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A tensor or list/tuple of tensors.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="layers3.Layer.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alternative for <em>call</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> – Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="layers3.Layer.initialize">
+<code class="descname">initialize</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#layers3.Layer.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write initialization logic here.</p>
+<p>This is a method to assign pre-defined parameters to the class.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="layers3.conv1D.html" class="btn btn-neutral float-right" title="layers3.conv1D" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../layer.html" class="btn btn-neutral float-left" title="Layers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, ddwe
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

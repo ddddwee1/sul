@@ -50,34 +50,68 @@ def spectrum_regularizer(kernel, cutoff_ratio=0.5, size=50, filter_type='high'):
 # dumb model declaration
 # make alias for init and call
 class Model(KModel):
+	"""
+	Model template
+	"""
 	def __init__(self, *args, **kwargs):
+		"""
+		The default initialization. Not recommended to touch.
+		"""
 		super(Model, self).__init__()
 		self.graph_initialized = False
 		self.initialize(*args, **kwargs)
 
 	def initialize(self, *args, **kwargs):
+		"""
+		Initialization function. Set layers, sub-modules and parameters here.
+		"""
 		pass 
 
 	def call(self, x, *args, **kwargs):
+		"""
+		Default function for class callables. Not recommended to touch.
+		"""
 		self.graph_initialized = True
 		return self.forward(x, *args, **kwargs)
 
 	def forward(self, x, *args, **kwargs):
+		"""
+		Here is where the model logits locates.
+
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		pass 
 
 ################
 # ETA class. I want to see the ETA. It's too boring to wait here.
 class ETA():
+	"""
+	Class for estimating the ETA. 
+	"""
 	def __init__(self,max_value):
+		"""
+		:param max_value: Max iteration
+		"""
 		self.start_time = time.time()
 		self.max_value = max_value
 		self.current = 0
 
 	def start(self):
+		"""
+		Reset the start time. In case that time-consumable operations are taken between initialization and update.
+		"""
 		self.start_time = time.time()
 		self.current = 0
 
 	def sec2hms(self,sec):
+		"""
+		Second to hour:minute:second
+
+		:type sec: int
+		:param sec: Number of seconds to be converted.
+
+		:return: A tuple containing hour, minute and second value.
+		"""
 		hm = sec//60
 		s = sec%60
 		h = hm//60
@@ -85,6 +119,15 @@ class ETA():
 		return h,m,s
 
 	def get_ETA(self,current,is_string=True):
+		"""
+		Get ETA based on current iteration.
+
+		:type current: int
+		:param current: Current number of iterations.
+
+		:type is_string: bool
+		:param is_string: Whether to return a string or tuple
+		"""
 		self.current = current
 		time_div = time.time() - self.start_time
 		time_remain = time_div * float(self.max_value - self.current) / float(self.current + 1)
@@ -96,11 +139,24 @@ class ETA():
 
 ################
 class EMAMeter():
+	"""
+	Exponential moving average meter.
+	"""
 	def __init__(self, alpha):
+		"""
+		:type alpha: float
+		:param alpha: The exponential value (or known as decay value) for moving average.
+		"""
 		self.alpha = alpha
 		self.value = None
 
 	def update(self, value):
+		"""
+		:type value: float
+		:param value: The observation value.
+
+		:return: Current value of the EMA meter.
+		"""
 		if self.value is None:
 			self.value = value
 		else:
@@ -111,7 +167,37 @@ class EMAMeter():
 # Layer Class 
 
 class ConvLayer(KModel):
+	"""
+	High-level convolution 2D layer
+	"""
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True, values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+
+		:param activation: Same candidates as layers3.activate
+
+		:type batch_norm: bool
+		:param batch_norm: Whether to use batch normalization in this layer.
+		"""
 		super(ConvLayer, self).__init__()
 		self.batch_norm = batch_norm
 		self.activation = activation
@@ -133,6 +219,11 @@ class ConvLayer(KModel):
 			self.act = L.activation(activation)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		
+		:return: Tensor or a list of tensor.
+		"""
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)

@@ -10,11 +10,12 @@ Welcome to sul's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   layer
+   model
 
+.. Indices and tables
+.. ==================
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`

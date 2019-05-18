@@ -7,18 +7,65 @@ import time
 
 # dumb layer declaration
 class Layer(KLayer):
+	"""
+	Layer template. Implement some basic functions by override initialize, build and forward.
+	"""
 	def __init__(self, *args, **kwargs):
+		"""
+		Default initialization. Not recommended to touch.
+		"""
 		super(Layer, self).__init__()
 		self.initialize(*args, **kwargs)
 
 	def initialize(self, *args, **kwargs):
+		"""
+		Write initialization logic here.
+
+		This is a method to assign pre-defined parameters to the class.
+		"""
 		pass 
 
-	def call(self, x):
-		return x 
+	def build(self, input_shape):
+		pass 
+
+	def call(self, x, *args, **kwargs):
+		return self.forward(x, *args, **kwargs)
+
+	def forward(self, x, *args, **kwargs):
+		"""
+		Alternative for *call*.
+
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
+		pass 
 
 class conv2D(KLayer):
+	"""
+	Basic convolution 2D layer
+	"""
 	def __init__(self, size, outchn, stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(conv2D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -63,6 +110,9 @@ class conv2D(KLayer):
 			self.pad_value = [self.size[0]//2, self.size[1]//2]
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.pad=='SAME_LEFT':
 			x = tf.pad(x, [[0,0], [self.pad_value[0], self.pad_value[0]], [self.pad_value[1], self.pad_value[1]], [0,0]])
 			pad = 'VALID'
@@ -74,7 +124,32 @@ class conv2D(KLayer):
 		return out 
 
 class conv3D(KLayer):
+	"""
+	Basic convolution 3D layer
+	"""
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME' or 'VALID'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(conv3D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -116,13 +191,41 @@ class conv3D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self,x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		out = tf.nn.conv3d(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
 			out = tf.nn.bias_add(out,self.bias)
 		return out 
 
 class conv1D(KLayer):
+	"""
+	Basic convolution 1D layer
+	"""
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME' or 'VALID'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(conv1D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -155,6 +258,9 @@ class conv1D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv1d(x,self.kernel,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
@@ -163,7 +269,32 @@ class conv1D(KLayer):
 		return out 
 
 class deconv1D(KLayer):
+	"""
+	Basic transposed convolution 1D layer
+	"""
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME' or 'VALID'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(deconv1D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -201,6 +332,9 @@ class deconv1D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv1d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
@@ -209,7 +343,32 @@ class deconv1D(KLayer):
 		return out 
 
 class deconv2D(KLayer):
+	"""
+	Basic transposed convolution 2D layer
+	"""
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME' or 'VALID'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(deconv2D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -257,6 +416,9 @@ class deconv2D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		self.outshape[0] = x.get_shape().as_list()[0]
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv2d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
@@ -266,7 +428,32 @@ class deconv2D(KLayer):
 		return out 
 
 class deconv3D(KLayer):
+	"""
+	Basic transposed convolution 3D layer
+	"""
 	def __init__(self,size,outchn,stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type outchn: int
+		:param outchn: Number of output channels
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME' or 'VALID'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(deconv3D, self).__init__()
 		self.size = size
 		self.outchn = outchn
@@ -313,6 +500,9 @@ class deconv3D(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv3d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
@@ -321,7 +511,20 @@ class deconv3D(KLayer):
 		return out 
 
 class maxpoolLayer(KLayer):
+	"""
+	Basic max pooling layer
+	"""
 	def __init__(self, size, stride, pad='SAME'):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of pooling kernel.
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+		"""
 		super(maxpoolLayer, self).__init__()
 		self.size = size
 		self.stride = stride
@@ -331,6 +534,9 @@ class maxpoolLayer(KLayer):
 		self.dim = len(input_shape)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.pad=='SAME_LEFT':
 			if isinstance(self.size, int):
 				padpix = self.size//2
@@ -345,13 +551,29 @@ class maxpoolLayer(KLayer):
 		return out 
 
 class avgpoolLayer(KLayer):
+	"""
+	Basic average pooling layer
+	"""
 	def __init__(self, size, stride, pad='SAME'):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of pooling kernel.
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be rather integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+		"""
 		super(avgpoolLayer, self).__init__()
 		self.size = size 
 		self.stride = stride
 		self.pad = pad 
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.pad=='SAME_LEFT':
 			if isinstance(self.size, int):
 				padpix = self.size//2
@@ -366,6 +588,9 @@ class avgpoolLayer(KLayer):
 		return out 
 
 class globalAvgpoolLayer(KLayer):
+	"""
+	Basic global average pooling layer
+	"""
 	def __init__(self):
 		super(globalAvgpoolLayer, self).__init__()
 
@@ -373,6 +598,9 @@ class globalAvgpoolLayer(KLayer):
 		self.num_dim = len(input_shape)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.num_dim==3:
 			res = tf.reduce_mean(x, axis=1, keepdims=True)
 		elif self.num_dim==4:
@@ -382,13 +610,30 @@ class globalAvgpoolLayer(KLayer):
 		return res 
 
 class activation(KLayer):
+	"""
+	Basic activation layer
+	"""
 	def __init__(self, param, **kwargs):
+		"""
+		Possible values:
+			- model3.PARAM_RELU
+			- model3.PARAM_LRELU
+			- model3.PARAM_ELU
+			- model3.PARAM_TANH
+			- model3.PARAM_MFM
+			- model3.PARAM_MFM_FC
+			- model3.PARAM_SIGMOID
+
+		"""
 		super(activation, self).__init__()
 
 		self.param = param
 		self.kwargs = kwargs
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.param == 0:
 			res =  tf.nn.relu(x)
 		elif self.param == 1:
@@ -415,7 +660,23 @@ class activation(KLayer):
 		return res
 
 class fcLayer(KLayer):
+	"""
+	Basic fully connected layer
+	"""
 	def __init__(self, outsize, usebias=True, values=None, norm=False):
+		"""
+		:type outsize: int
+		:param outsize: Number of output channels
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+
+		:type norm: bool (default=False)
+		:param norm: Whether to normalize the kernel (along axis 0) before matrix multiplication
+		"""
 		super(fcLayer, self).__init__()
 		self.outsize = outsize
 		self.usebias = usebias
@@ -441,6 +702,9 @@ class fcLayer(KLayer):
 				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(0.0))
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.norm:
 			k = tf.nn.l2_normalize(self.kernel, axis=0)
 		else:
@@ -451,7 +715,23 @@ class fcLayer(KLayer):
 		return res 
 
 class batch_norm(KLayer):
+	"""
+	Basic batch normalization layer
+	"""
 	def __init__(self, decay=1e-2, epsilon=1e-5, is_training=None, values=None):
+		"""
+		:type decay: float
+		:param decay: Decay rate.
+
+		:type epsilon: float
+		:param epsilon: Epsilon value to avoid 0 division.
+
+		:type is_training: bool
+		:param is_training: Define whether this layer is in training mode
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
 		super(batch_norm, self).__init__()
 
 		self.decay = decay
@@ -480,6 +760,9 @@ class batch_norm(KLayer):
 		variable.assign_sub(delta)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.is_training is None:
 			is_training = bool(tf.keras.backend.learning_phase())
 		else:
@@ -510,6 +793,9 @@ class batch_norm(KLayer):
 		return res 
 
 class flatten(KLayer):
+	"""
+	Basic flatten layer
+	"""
 	def __init__(self):
 		super(flatten, self).__init__()
 
@@ -517,6 +803,9 @@ class flatten(KLayer):
 		self.shape = input_shape
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		self.shape = x.get_shape().as_list()
 		num = 1
 		for k in self.shape[1:]:
@@ -525,7 +814,26 @@ class flatten(KLayer):
 		return res 
 
 class graphConvLayer(KLayer):
+	"""
+	Basic graph convolution layer
+	"""
 	def __init__(self, outsize, adj_mtx=None, adj_fn=None, values=None, usebias=True):
+		"""
+		:type outsize: int
+		:param outsize: Output unit number
+
+		:type adj_mtx: np.array
+		:param adj_mtx: A matrix that indicates the affinity.
+
+		:type adj_fn: callable
+		:param adj_fn: A function to infer the affinity matrix.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+
+		:type usebias: bool
+		:param usebias: Whether to use bias in this layer.
+		"""
 		super(graphConvLayer, self).__init__()
 		assert (adj_mtx is None) ^ (adj_fn is None), 'Assign either adj_mtx or adj_fn' 
 		self.outsize = outsize
@@ -565,6 +873,9 @@ class graphConvLayer(KLayer):
 		return tf.stop_gradient(A_)
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		if self.adj_mtx is not None:
 			A = self.adj_mtx
 			if not self.normalized:
@@ -582,7 +893,14 @@ class graphConvLayer(KLayer):
 		return res 
 
 class bilinearUpSample(KLayer):
+	"""
+	Basic bilinear upsampling layer. The biliear upsampling in tensorflow 1.x version has some mismatch with cv2&PIL&pytorch.
+	"""
 	def __init__(self, factor):
+		"""
+		:type factor: int
+		:param factor: The upsample factor. The output will become *factor* times larger as the input tensor.
+		"""
 		super(bilinearUpSample, self).__init__()
 		self.factor = factor
 
@@ -648,6 +966,9 @@ class bilinearUpSample(KLayer):
 		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, initializer=tf.initializers.constant(kernel))
 
 	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		pad = [[0,0]] + [[1,1]]*(self.dim-2) + [[0,0]]
 		x = tf.pad(x, pad, mode='symmetric')
 		self.outshape[0] = x.get_shape().as_list()[0]
@@ -664,7 +985,14 @@ class bilinearUpSample(KLayer):
 		return res 
 
 class NALU(KLayer):
+	"""
+	Arxiv: 1808.00508
+	"""
 	def __init__(self, outdim):
+		"""
+		:type outdim: int
+		:param outdim: Output unit number of this layer.
+		"""
 		super(NALU, self).__init__()
 		self.outdim = outdim
 	def build(self, input_shape):
@@ -673,6 +1001,9 @@ class NALU(KLayer):
 		self.M = self.add_variable('M', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
 		self.G = self.add_variable('G', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
 	def call(self,x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
 		W = tf.tanh(self.W) * tf.sigmoid(self.M)
 		g = tf.sigmoid(tf.matmul(x, self.G))
 		m = tf.exp(tf.matmul(tf.log(tf.abs(x) + 1e-8), W))
