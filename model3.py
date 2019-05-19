@@ -179,13 +179,13 @@ class ConvLayer(KModel):
 		:param outchn: Number of output channels
 
 		:type stride: int or list[int]
-		:param stride: Stride number. Can be rather integer or list of integers
+		:param stride: Stride number. Can be either integer or list of integers
 
 		:type pad: String
 		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
 
 		:type dilation_rate: int or list[int]
-		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+		:param dilation_rate: Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
 
 		:type usebias: bool
 		:param usebias: Whether to add bias term in this layer.
@@ -244,13 +244,13 @@ class ConvLayer3D(KModel):
 		:param outchn: Number of output channels
 
 		:type stride: int or list[int]
-		:param stride: Stride number. Can be rather integer or list of integers
+		:param stride: Stride number. Can be either integer or list of integers
 
 		:type pad: String
 		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
 
 		:type dilation_rate: int or list[int]
-		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+		:param dilation_rate: Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
 
 		:type usebias: bool
 		:param usebias: Whether to add bias term in this layer.
@@ -309,13 +309,13 @@ class ConvLayer1D(KModel):
 		:param outchn: Number of output channels
 
 		:type stride: int or list[int]
-		:param stride: Stride number. Can be rather integer or list of integers
+		:param stride: Stride number. Can be either integer or list of integers
 
 		:type pad: String
 		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
 
 		:type dilation_rate: int or list[int]
-		:param dilation_rate: Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+		:param dilation_rate: Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
 
 		:type usebias: bool
 		:param usebias: Whether to add bias term in this layer.
