@@ -347,6 +347,71 @@ class ConvLayer1D(KModel):
 			x = self.act(x)
 		return x 
 
+class DWConvLayer(KModel):
+	"""
+	High-level depth-wise convolution 2D layer
+	"""
+	def __init__(self, size, multiplier, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True, values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type multiplier: int
+		:param multiplier: Multiplier of number of output channel. (outchannel = multiplier * inchannel)
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be either integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+
+		:param activation: Same candidates as layers3.activate
+
+		:type batch_norm: bool
+		:param batch_norm: Whether to use batch normalization in this layer.
+		"""
+		super(DWConvLayer, self).__init__()
+		self.batch_norm = batch_norm
+		self.activation = activation
+		self.values = values
+
+		if values is None:
+			self.dwconv = L.dwconv2D(size, multiplier, stride, pad, dilation_rate, usebias)
+			if batch_norm:
+				self.bn = L.batch_norm()
+		else:
+			if usebias:
+				idx = 2 
+			else:
+				idx = 1
+			self.dwconv = L.dwconv2D(size, multiplier, stride, pad, dilation_rate, usebias, values=values[:idx])
+			if batch_norm:
+				self.bn = L.batch_norm(values=values[idx:])
+		if activation!=-1:
+			self.act = L.activation(activation)
+
+	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		
+		:return: Tensor or a list of tensor.
+		"""
+		x = self.dwconv(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation!=-1:
+			x = self.act(x)
+		return x 
+
 class DeconvLayer1D(KModel):
 	def __init__(self, size, outchn, dilation_rate=1, stride=1, pad='SAME', activation=-1, batch_norm=False, usebias=True):
 		super(DeconvLayer1D, self).__init__()
@@ -528,7 +593,7 @@ class OctSplit(Model):
 
 class MarginalCosineLayer(Model):
 	def initialize(self, num_classes):
-		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
+		self.classifier = Dense(num_classes, usebias=False, norm=True)
 	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
 		# res = cos(m1t + m2) + m3
 		# this loss will cause potential unstable

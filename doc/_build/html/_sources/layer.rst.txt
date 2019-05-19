@@ -8,6 +8,7 @@ Layers
 	layers3.conv1D
 	layers3.conv2D
 	layers3.conv3D
+	layers3.dwconv2D
 	layers3.deconv1D
 	layers3.deconv2D
 	layers3.deconv3D

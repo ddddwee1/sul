@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>model3.ConvLayer &mdash; sul  documentation</title>
+  <title>model3.DWConvLayer &mdash; sul  documentation</title>
   
 
   
@@ -35,8 +35,7 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="model3.ConvLayer1D" href="model3.ConvLayer1D.html" />
-    <link rel="prev" title="model3.Model" href="model3.Model.html" /> 
+    <link rel="prev" title="model3.ConvLayer3D" href="model3.ConvLayer3D.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -87,10 +86,10 @@
 <li class="toctree-l2"><a class="reference internal" href="model3.ETA.html">model3.ETA</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model3.EMAMeter.html">model3.EMAMeter</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model3.Model.html">model3.Model</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">model3.ConvLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model3.ConvLayer.html">model3.ConvLayer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model3.ConvLayer1D.html">model3.ConvLayer1D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model3.ConvLayer3D.html">model3.ConvLayer3D</a></li>
-<li class="toctree-l2"><a class="reference internal" href="model3.DWConvLayer.html">model3.DWConvLayer</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">model3.DWConvLayer</a></li>
 </ul>
 </li>
 </ul>
@@ -140,13 +139,13 @@
         
           <li><a href="../model.html">Model</a> &raquo;</li>
         
-      <li>model3.ConvLayer</li>
+      <li>model3.DWConvLayer</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/stubs/model3.ConvLayer.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/stubs/model3.DWConvLayer.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -159,22 +158,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="model3-convlayer">
-<h1>model3.ConvLayer<a class="headerlink" href="#model3-convlayer" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="model3-dwconvlayer">
+<h1>model3.DWConvLayer<a class="headerlink" href="#model3-dwconvlayer" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
-<dt id="model3.ConvLayer">
-<em class="property">class </em><code class="descclassname">model3.</code><code class="descname">ConvLayer</code><span class="sig-paren">(</span><em>size</em>, <em>outchn</em>, <em>dilation_rate=1</em>, <em>stride=1</em>, <em>pad='SAME'</em>, <em>activation=-1</em>, <em>batch_norm=False</em>, <em>usebias=True</em>, <em>values=None</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.ConvLayer" title="Permalink to this definition">¶</a></dt>
-<dd><p>High-level convolution 2D layer</p>
+<dt id="model3.DWConvLayer">
+<em class="property">class </em><code class="descclassname">model3.</code><code class="descname">DWConvLayer</code><span class="sig-paren">(</span><em>size</em>, <em>multiplier</em>, <em>dilation_rate=1</em>, <em>stride=1</em>, <em>pad='SAME'</em>, <em>activation=-1</em>, <em>batch_norm=False</em>, <em>usebias=True</em>, <em>values=None</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.DWConvLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>High-level depth-wise convolution 2D layer</p>
 <dl class="method">
-<dt id="model3.ConvLayer.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>size</em>, <em>outchn</em>, <em>dilation_rate=1</em>, <em>stride=1</em>, <em>pad='SAME'</em>, <em>activation=-1</em>, <em>batch_norm=False</em>, <em>usebias=True</em>, <em>values=None</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.ConvLayer.__init__" title="Permalink to this definition">¶</a></dt>
+<dt id="model3.DWConvLayer.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>size</em>, <em>multiplier</em>, <em>dilation_rate=1</em>, <em>stride=1</em>, <em>pad='SAME'</em>, <em>activation=-1</em>, <em>batch_norm=False</em>, <em>usebias=True</em>, <em>values=None</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.DWConvLayer.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>size</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Indicate the size of convolution kernel.</li>
-<li><strong>outchn</strong> (<em>int</em>) – Number of output channels</li>
+<li><strong>multiplier</strong> (<em>int</em>) – Multiplier of number of output channel. (outchannel = multiplier * inchannel)</li>
 <li><strong>stride</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Stride number. Can be either integer or list of integers</li>
 <li><strong>pad</strong> (<em>String</em>) – Padding method, must be one of ‘SAME’, ‘VALID’, ‘SAME_LEFT’. ‘VALID’ does not use auto-padding scheme. ‘SAME’ uses tensorflow-style auto-padding and ‘SAME_LEFT’ uses pytorch-style auto-padding.</li>
 <li><strong>dilation_rate</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.</li>
@@ -190,8 +189,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="model3.ConvLayer.call">
-<code class="descname">call</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.ConvLayer.call" title="Permalink to this definition">¶</a></dt>
+<dt id="model3.DWConvLayer.call">
+<code class="descname">call</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#model3.DWConvLayer.call" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -216,10 +215,8 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="model3.ConvLayer1D.html" class="btn btn-neutral float-right" title="model3.ConvLayer1D" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
-      
-        <a href="model3.Model.html" class="btn btn-neutral float-left" title="model3.Model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="model3.ConvLayer3D.html" class="btn btn-neutral float-left" title="model3.ConvLayer3D" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

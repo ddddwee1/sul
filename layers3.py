@@ -268,6 +268,92 @@ class conv1D(KLayer):
 		# out = tf.squeeze(out, axis=1)
 		return out 
 
+class dwconv2D(KLayer):
+	"""
+	Basic depth-wise convolution layer.
+	"""
+	def __init__(self, size, multiplier, stride=1,pad='SAME',dilation_rate=1,usebias=True,values=None):
+		"""
+		:type size: int or list[int]
+		:param size: Indicate the size of convolution kernel.
+
+		:type multiplier: int
+		:param multiplier: Multiplier of number of output channel. (outchannel = multiplier * inchannel)
+
+		:type stride: int or list[int]
+		:param stride: Stride number. Can be either integer or list of integers
+
+		:type pad: String
+		:param pad: Padding method, must be one of 'SAME', 'VALID', 'SAME_LEFT'. 'VALID' does not use auto-padding scheme. 'SAME' uses tensorflow-style auto-padding and 'SAME_LEFT' uses pytorch-style auto-padding.
+
+		:type dilation_rate: int or list[int]
+		:param dilation_rate: Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.
+
+		:type usebias: bool
+		:param usebias: Whether to add bias term in this layer.
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
+		super(dwconv2D, self).__init__()
+		self.size = size
+		self.multiplier = multiplier
+		self.stride = stride
+		self.usebias = usebias
+		self.values = values
+		self.dilation_rate = dilation_rate
+		assert (pad in ['SAME','VALID','SAME_LEFT'])
+		self.pad = pad 
+
+	def _parse_args(self, input_shape):
+		inchannel = input_shape[-1]
+		self.outchn = inchannel * self.multiplier
+		# parse args
+		if isinstance(self.size,list):
+			self.size = [self.size[0],self.size[1],inchannel,self.multiplier]
+		else:
+			self.size = [self.size, self.size, inchannel, self.multiplier]
+		# set stride
+		if isinstance(self.stride,list):
+			self.stride = [1,self.stride[0],self.stride[1],1]
+		else:
+			self.stride = [1,self.stride, self.stride, 1]
+		# set dilation
+		if isinstance(self.dilation_rate,list):
+			self.dilation_rate = [self.dilation_rate[0],self.dilation_rate[1]]
+		else:
+			self.dilation_rate = [self.dilation_rate,self.dilation_rate]
+
+	def build(self, input_shape):
+		values = self.values
+		self._parse_args(input_shape)
+		if self.values is not None:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+		else:
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
+		if self.usebias:
+			if self.values is not None:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+			else:
+				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+		if self.pad == 'SAME_LEFT':
+			self.pad_value = [self.size[0]//2, self.size[1]//2]
+
+	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
+		if self.pad=='SAME_LEFT':
+			x = tf.pad(x, [[0,0], [self.pad_value[0], self.pad_value[0]], [self.pad_value[1], self.pad_value[1]], [0,0]])
+			pad = 'VALID'
+		else:
+			pad = self.pad
+
+		out = tf.nn.depthwise_conv2d(x, self.kernel, self.stride, pad, dilations=self.dilation_rate)
+		if self.usebias:
+			out = tf.nn.bias_add(out, self.bias)
+		return out 
+
 class deconv1D(KLayer):
 	"""
 	Basic transposed convolution 1D layer

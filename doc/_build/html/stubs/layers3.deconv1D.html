@@ -36,7 +36,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="layers3.deconv2D" href="layers3.deconv2D.html" />
-    <link rel="prev" title="layers3.conv3D" href="layers3.conv3D.html" /> 
+    <link rel="prev" title="layers3.dwconv2D" href="layers3.dwconv2D.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -87,6 +87,7 @@
 <li class="toctree-l2"><a class="reference internal" href="layers3.conv1D.html">layers3.conv1D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="layers3.conv2D.html">layers3.conv2D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="layers3.conv3D.html">layers3.conv3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="layers3.dwconv2D.html">layers3.dwconv2D</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">layers3.deconv1D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="layers3.deconv2D.html">layers3.deconv2D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="layers3.deconv3D.html">layers3.deconv3D</a></li>
@@ -185,9 +186,9 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>size</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Indicate the size of convolution kernel.</li>
 <li><strong>outchn</strong> (<em>int</em>) – Number of output channels</li>
-<li><strong>stride</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Stride number. Can be rather integer or list of integers</li>
+<li><strong>stride</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Stride number. Can be either integer or list of integers</li>
 <li><strong>pad</strong> (<em>String</em>) – Padding method, must be one of ‘SAME’ or ‘VALID’. ‘VALID’ does not use auto-padding scheme. ‘SAME’ uses tensorflow-style auto-padding.</li>
-<li><strong>dilation_rate</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.</li>
+<li><strong>dilation_rate</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.</li>
 <li><strong>usebias</strong> (<em>bool</em>) – Whether to add bias term in this layer.</li>
 <li><strong>values</strong> (<em>list</em><em>[</em><em>np.array</em><em>]</em>) – If the param ‘values’ is set, the layer will be initialized with the list of numpy array.</li>
 </ul>
@@ -245,7 +246,7 @@ layer instantiation and layer call.</p>
         <a href="layers3.deconv2D.html" class="btn btn-neutral float-right" title="layers3.deconv2D" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="layers3.conv3D.html" class="btn btn-neutral float-left" title="layers3.conv3D" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="layers3.dwconv2D.html" class="btn btn-neutral float-left" title="layers3.dwconv2D" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

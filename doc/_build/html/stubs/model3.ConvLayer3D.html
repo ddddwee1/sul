@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="model3.DWConvLayer" href="model3.DWConvLayer.html" />
     <link rel="prev" title="model3.ConvLayer1D" href="model3.ConvLayer1D.html" /> 
 </head>
 
@@ -89,6 +90,7 @@
 <li class="toctree-l2"><a class="reference internal" href="model3.ConvLayer.html">model3.ConvLayer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model3.ConvLayer1D.html">model3.ConvLayer1D</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">model3.ConvLayer3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model3.DWConvLayer.html">model3.DWConvLayer</a></li>
 </ul>
 </li>
 </ul>
@@ -173,9 +175,9 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>size</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Indicate the size of convolution kernel.</li>
 <li><strong>outchn</strong> (<em>int</em>) – Number of output channels</li>
-<li><strong>stride</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Stride number. Can be rather integer or list of integers</li>
+<li><strong>stride</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Stride number. Can be either integer or list of integers</li>
 <li><strong>pad</strong> (<em>String</em>) – Padding method, must be one of ‘SAME’, ‘VALID’, ‘SAME_LEFT’. ‘VALID’ does not use auto-padding scheme. ‘SAME’ uses tensorflow-style auto-padding and ‘SAME_LEFT’ uses pytorch-style auto-padding.</li>
-<li><strong>dilation_rate</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Dilation rate. Can be rather integer or list of integers. When dilation_rate is larger than 1, stride should be 1.</li>
+<li><strong>dilation_rate</strong> (<em>int</em><em> or </em><em>list</em><em>[</em><em>int</em><em>]</em>) – Dilation rate. Can be either integer or list of integers. When dilation_rate is larger than 1, stride should be 1.</li>
 <li><strong>usebias</strong> (<em>bool</em>) – Whether to add bias term in this layer.</li>
 <li><strong>values</strong> (<em>list</em><em>[</em><em>np.array</em><em>]</em>) – If the param ‘values’ is set, the layer will be initialized with the list of numpy array.</li>
 <li><strong>activation</strong> – Same candidates as layers3.activate</li>
@@ -213,6 +215,8 @@
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="model3.DWConvLayer.html" class="btn btn-neutral float-right" title="model3.DWConvLayer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="model3.ConvLayer1D.html" class="btn btn-neutral float-left" title="model3.ConvLayer1D" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

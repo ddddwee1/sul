@@ -10,4 +10,4 @@ Model
 	model3.ConvLayer
 	model3.ConvLayer1D
 	model3.ConvLayer3D
-	
+	model3.DWConvLayer
