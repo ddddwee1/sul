@@ -26,10 +26,8 @@
 
 - Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
 
-- Object edge segmentation (No reference)
+- FaceSwap
 
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
-
-- Multi-GPU training
