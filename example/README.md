@@ -28,6 +28,8 @@
 
 - FaceSwap
 
+- Motion prediction (on working...)
+
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
