@@ -4,6 +4,7 @@ import numpy as np
 import os 
 from tensorflow.keras import Model as KModel
 import random
+from tensorflow.python.training.tracking.data_structures import NoDependency
 
 # activation const
 PARAM_RELU = 0
