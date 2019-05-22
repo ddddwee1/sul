@@ -7,4 +7,4 @@ ACTIONS = ["walking", "eating", "smoking", "discussion",  "directions",
 			"greeting", "phoning", "posing", "purchases", "sitting",
 			"sittingdown", "takingphoto", "waiting", "walkingdog",
 			"walkingtogether"]
-MAX_ITERS = 10000
+MAX_ITERS = 100000
