@@ -686,12 +686,16 @@ class LSTMCell(Model):
 
 class LSTM(Model):
 	def initialize(self, outdim):
+		self.outdim = outdim
 		self.LSTM = LSTMCell(outdim)
 		self.h = None 
 		self.c = None 
-	def forward(self, x):
+	def forward(self, x, init_hc=False):
 		assert x[0] is not None, 'First element should not be None'
 		outs = [] 
+		if init_hc:
+			self.h = tf.zeros([x[0].shape[0], self.outdim])
+			self.c = tf.zeros([x[0].shape[0], self.outdim])
 		for i in range(len(x)):
 			next_inp = x[i]
 			if next_inp is None:
@@ -699,9 +703,9 @@ class LSTM(Model):
 			else:
 				next_inp = tf.convert_to_tensor(next_inp)
 			if self.h is None:
-				self.h = tf.zeros_like(next_inp)
+				self.h = tf.zeros([x[0].shape[0], self.outdim])
 			if self.c is None:
-				self.c = tf.zeros_like(next_inp)
+				self.c = tf.zeros([x[0].shape[0], self.outdim])
 			self.h, self.c = self.LSTM(next_inp, self.h, self.c)
 			outs.append(self.h)
 		return outs 
