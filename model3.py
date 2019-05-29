@@ -173,6 +173,7 @@ class Summary():
 		self.save_interval = save_interval
 		self.data = {}
 	def push(self, category, value):
+		value = float(value)
 		if not category in self.data:
 			self.data[category] = []
 		self.data[category].append([self.n_iter, value])
