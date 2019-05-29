@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np 
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import json 
 
 class Plotter3D():
 	def __init__(self, usebuffer=False, elev=None, azim=None, axis='on', axis_tick='on', no_margin=False):
@@ -247,6 +248,47 @@ class LossPlotter():
 	def set_legend(self, location):
 		self.ax.legend(loc=location)
 	def show(self, ion=True):
+		if ion:
+			plt.ion()
+		plt.show()
+
+class LossPlotterJson():
+	def __init__(self, loss_file, keys, alpha=0.1, scales=None):
+		fig = plt.figure()
+		self.ax = fig.add_subplot(111)
+		dt = json.load(open(loss_file))
+		self.losses = [dt[k] for k in keys]
+		self.losses = [[_[1] for _ in i] for i in self.losses]
+		self.keys = keys
+		self.alpha = alpha
+		if scales is None:
+			scales = [1 for _ in range(len(losses))]
+		else:
+			scales = scales
+
+	def apply_ema(self, ignore_index=0):
+		def ema(arr):
+			alpha = self.alpha
+			for i in range(len(arr)-1):
+				arr[i+1] = alpha * arr[i+1] + (1 - alpha) * arr[i]
+
+		for i in range(ignore_index, len(self.losses)):
+			ema(self.losses[i])
+
+	def plot(self):
+		x = np.float32(list(range(len(self.losses[0]))))
+		for d,lb in zip(self.losses, self.keys):
+			self.ax.plot(x, d, label=lb)
+
+	def set_title(self, title):
+		self.ax.title(title)
+
+	def set_xylabel(self, label):
+		self.ax.set_xlabel(label[0])
+		self.ax.set_ylabel(label[1])
+	def set_legend(self, location):
+		self.ax.legend(loc=location)
+	def show(self, ion=False):
 		if ion:
 			plt.ion()
 		plt.show()
