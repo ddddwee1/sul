@@ -5,6 +5,7 @@ import os
 from tensorflow.keras import Model as KModel
 import random
 from tensorflow.python.training.tracking.data_structures import NoDependency
+import json 
 
 # activation const
 PARAM_RELU = 0
@@ -163,6 +164,24 @@ class EMAMeter():
 		else:
 			self.value = self.value * self.alpha + value * (1-self.alpha)
 		return self.value
+
+################
+class Summary():
+	def __init__(self, fname, save_interval=100):
+		self.n_iter = 0
+		self.fname = fname
+		self.save_interval = save_interval
+		self.data = {}
+	def push(self, category, value):
+		if not category in self.data:
+			self.data[category] = []
+		self.data[category].append([self.n_iter, value])
+	def step(self):
+		self.n_iter += 1
+		if self.n_iter%self.save_interval==0:
+			with open(self.fname,'w') as f:
+				json.dump(self.data, f)
+
 
 ################
 # Layer Class 
