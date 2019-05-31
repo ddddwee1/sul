@@ -709,7 +709,7 @@ class activation(KLayer):
 			- model3.PARAM_MFM
 			- model3.PARAM_MFM_FC
 			- model3.PARAM_SIGMOID
-
+			- model3.PARAM_SWISH
 		"""
 		super(activation, self).__init__()
 
@@ -741,6 +741,9 @@ class activation(KLayer):
 			res = tf.reduce_max(tf.reshape(x,[-1,2,shape[-1]//2]),axis=[1])
 		elif self.param == 6:
 			res =  tf.sigmoid(x)
+		elif self.param == 7:
+			# res = tf.nn.swish(x)
+			res = tf.sigmoid(x) * x 
 		else:
 			res =  x
 		return res

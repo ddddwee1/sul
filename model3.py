@@ -15,6 +15,7 @@ PARAM_TANH = 3
 PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
+PARAM_SWISH = 7
 
 ######## util functions ###########
 def accuracy(pred,y,name='acc', one_hot=True):
