@@ -740,6 +740,7 @@ MaxPool = L.maxpoolLayer
 GlobalAvgPool = L.globalAvgpoolLayer
 flatten = L.flatten()
 BatchNorm = L.batch_norm
+InstNorm = L.inst_norm
 DeconvLayer2D = DeconvLayer
 ConvLayer2D = ConvLayer
 BilinearUpSample = L.bilinearUpSample

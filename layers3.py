@@ -881,6 +881,90 @@ class batch_norm(KLayer):
 			res = tf.reshape(res, inp_shape)
 		return res 
 
+class inst_norm(KLayer):
+	"""
+	Basic instance normalization layer
+	"""
+	def __init__(self, decay=1e-2, epsilon=1e-5, is_training=None, values=None):
+		"""
+		:type decay: float
+		:param decay: Decay rate.
+
+		:type epsilon: float
+		:param epsilon: Epsilon value to avoid 0 division.
+
+		:type is_training: bool
+		:param is_training: Define whether this layer is in training mode
+
+		:type values: list[np.array]
+		:param values: If the param 'values' is set, the layer will be initialized with the list of numpy array.
+		"""
+		super(batch_norm, self).__init__()
+
+		self.decay = decay
+		self.epsilon = epsilon
+		self.is_training = is_training
+		self.values = values
+
+	def build(self, input_shape):
+		values = self.values
+		shape = input_shape[-1]
+		if self.values is None:
+			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(0.0),trainable=False)
+			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(1.0),trainable=False)
+
+			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(1.0),trainable=True)
+			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(0.0),trainable=True)
+		else:
+			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(self.values[0]),trainable=False)
+			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(values[1]),trainable=False)
+
+			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(values[2]),trainable=True)
+			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(values[3]),trainable=True)
+
+	def update(self,variable,value):
+		delta = (variable - value) * self.decay
+		variable.assign_sub(delta)
+
+	def call(self, x):
+		"""
+		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
+		"""
+		if self.is_training is None:
+			is_training = bool(tf.keras.backend.learning_phase())
+		else:
+			is_training = self.is_training
+		# is_training = True
+		# print(is_training, time.time())
+		inp_shape = x.get_shape().as_list()
+		inp_dim_num = len(inp_shape)
+		if inp_dim_num==3:
+			x = tf.expand_dims(x, axis=1)
+		elif inp_dim_num==2:
+			x = tf.expand_dims(x, axis=1)
+			x = tf.expand_dims(x, axis=1)
+		elif inp_dim_num==5:
+			x = tf.reshape(x, [inp_shape[0], inp_shape[1], inp_shape[2]*inp_shape[3], inp_shape[4]])
+
+		if is_training:
+			mean = tf.reduce_mean(x, axis=[1,2], keepdims=True)
+			std = tf.reduce_std(x, axis=[1,2], keepdims=True) 
+			res = (x - mean) / (std + self.epsilon)
+			mean = tf.reduce_mean(mean, axis=[0,1,2])
+			std = tf.reduce_mean(std, axis=[0,1,2])
+			self.update(self.moving_average, mean)
+			self.update(self.variance, std)
+		else:
+			res = (x - self.moving_average) / (self.variance + self.epsilon)
+			
+		if inp_dim_num==3:
+			res = tf.squeeze(res , axis=1)
+		elif inp_dim_num==2:
+			res = tf.squeeze(res, axis=[1,2])
+		elif inp_dim_num==5:
+			res = tf.reshape(res, inp_shape)
+		return res 
+
 class flatten(KLayer):
 	"""
 	Basic flatten layer
