@@ -57,8 +57,9 @@ class EffNet(M.Model):
 		self.c1 = M.ConvLayer(config.ksize[0], config.out_chnnels[0], stride=config.strides[0], activation=M.PARAM_SWISH, usebias=False, batch_norm=True)
 		self.blocks = []
 		for r,k,i,o,s,e in zip(config.repeats, config.ksize[1:], config.out_chnnels[:-1], config.out_chnnels[1:], config.strides[1:], config.expansions):
+			# print(r)
 			for num_blk in range(r):
-				self.blocks.append(MBConvBlock(i, o, e, 1 if num_blk==0 else k, s))
+				self.blocks.append(MBConvBlock(i, o, e, k, s if num_blk==0 else 1))
 
 		self.emb_bn = M.BatchNorm()
 		self.fc1 = M.Dense(config.emb_size, batch_norm=True)
@@ -66,10 +67,16 @@ class EffNet(M.Model):
 		x = self.c1(x)
 		for block in self.blocks:
 			x = block(x)
-
+		print(x.shape)
 		x = M.flatten(x)
 		x = self.emb_bn(x)
 		if tf.keras.backend.learning_phase():
 			x = tf.nn.dropout(x, 0.4)
 		x = self.fc1(x)
 		return x
+
+if __name__=='__main__':
+	import numpy as np 
+	net = EffNet()
+	a = np.ones([1,112,112,3]).astype(np.float32)
+	a = net(a)
