@@ -52,6 +52,13 @@ def process(data):
 	for i in data:
 		img = cv2.imread(i.replace('.json',''))
 		label = json.load(open(i))
+
+		#random scale 
+		scale = random.random() * 0.1 + 0.95
+		H = np.float32([[scale, 0, 0], [0, scale, 0]])
+		img = cv2.warpAffine(img, H, img.shape)
+		label = np.float32(label) * scale
+
 		D = json.load(open(i.replace('.json','_D.json')))
 		# test occlusion
 		# print(label)
