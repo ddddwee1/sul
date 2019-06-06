@@ -196,13 +196,13 @@ class ResNet(M.Model):
 		x = self.lastfuse(x)
 		return x 
 
-tf.keras.backend.set_learning_phase(False)
+# tf.keras.backend.set_learning_phase(False)
 
-net = ResNet()
-saver = M.Saver(net)
-saver.restore('./model/')
+# net = ResNet()
+# saver = M.Saver(net)
+# saver.restore('./model/')
 
-x = np.ones([1,256,256,3]).astype(np.float32)
-y = net(x)
-print(tf.transpose(y, [0,3,1,2]))
+# x = np.ones([1,256,256,3]).astype(np.float32)
+# y = net(x)
+# print(tf.transpose(y, [0,3,1,2]))
 
