@@ -24,6 +24,8 @@
 
 - 2D Human Pose Detector (Xiao, Bin, Haiping Wu, and Yichen Wei. "Simple baselines for human pose estimation and tracking." Proceedings of the European Conference on Computer Vision (ECCV). 2018)
 
+- HR Net (Sun, Ke, et al. "Deep High-Resolution Representation Learning for Human Pose Estimation." arXiv preprint arXiv:1902.09212 (2019))
+
 - Semantic segmentation (I cannot find reference. It's just softmax cross entropy on output.)
 
 - FaceSwap
