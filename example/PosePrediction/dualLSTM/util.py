@@ -1,5 +1,6 @@
 import config 
 import numpy as np 
+import data_utils
 
 BATCH_SIZE = config.BATCH_SIZE
 SEQ_IN = config.SEQ_IN
@@ -107,14 +108,14 @@ def get_batch_srnn(data, action, actions ):
 
 	batch_size = 8 # we always evaluate 8 seeds
 	subject		= 5 # we always evaluate on subject 5
-	source_seq_len = seq_length_in
-	target_seq_len = seq_length_out
+	source_seq_len = SEQ_IN
+	target_seq_len = SEQ_OUT
 
 	seeds = [( action, (i%2)+1, frames[action][i] ) for i in range(batch_size)]
 
-	encoder_inputs	= np.zeros( (batch_size, source_seq_len-1, input_size), dtype=float )
-	decoder_inputs	= np.zeros( (batch_size, target_seq_len, input_size), dtype=float )
-	decoder_outputs = np.zeros( (batch_size, target_seq_len, input_size), dtype=float )
+	encoder_inputs	= np.zeros( (batch_size, source_seq_len-1, IN_DIM), dtype=float )
+	decoder_inputs	= np.zeros( (batch_size, target_seq_len, IN_DIM), dtype=float )
+	decoder_outputs = np.zeros( (batch_size, target_seq_len, IN_DIM), dtype=float )
 
 	# Compute the number of frames needed
 	total_frames = source_seq_len + target_seq_len
