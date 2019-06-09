@@ -7,6 +7,8 @@ def adjust_img(img):
 	# a = np.random.randint(2)
 	# if a==1:
 	# 	img = np.flip(img, axis=1)
+	if random.random()>0.5:
+		img = np.flip(img, axis=1)
 	return img 
 
 def process(batch, max_label):
@@ -26,12 +28,13 @@ class DataReader():
 		max_label = 0
 		for line in f:
 			line = line.strip().split('\t')
-			img = line[1]
-			label = int(line[2])
+			img = line[0]
+			label = int(line[1])
 			if label>max_label:
 				max_label = label
 			self.data.append([img, label])
 		random.shuffle(self.data)
+		print(self.data[0])
 		print('Finished')
 		self.pos = 0
 		self.epoch = 0
@@ -46,6 +49,7 @@ class DataReader():
 		if self.pos + self.bsize > len(self.data):
 			self.pos = 0
 			self.epoch += 1
+			print(self.data[0])
 			random.shuffle(self.data)
 
 		batch = self.data[self.pos: self.pos+self.bsize]
@@ -57,3 +61,9 @@ class DataReader():
 		batch = self.p.get()
 		self.prefetch()
 		return batch
+
+if __name__=='__main__':
+	a = cv2.imread('a.jpg')
+	c = adjust_img(a)
+	cv2.imshow('c',c)
+	cv2.waitKey(0)
