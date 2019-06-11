@@ -6,7 +6,7 @@ class Drop(M.Model):
 	def initialize(self, drop_rate):
 		self.keep_rate = 1 - drop_rate
 	def forward(self, x):
-		random_tensor = tf.random_uniform([tf.shape(x)[0],1,1,1]) + self.keep_rate
+		random_tensor = tf.random.uniform([tf.shape(x)[0],1,1,1]) + self.keep_rate
 		binary = tf.floor(random_tensor)
 		x = x * binary
 		return x 
@@ -48,6 +48,7 @@ class MBConvBlock(M.Model):
 		x = self.proj_conv(x)
 		if self.stride==1 and self.input_filters==self.output_filters:
 			if hasattr(self, 'drop') and tf.keras.backend.learning_phase():
+				# print('Drop')
 				x = self.drop(x)
 			x = tf.add(x, origin)
 		return x 
@@ -59,7 +60,7 @@ class EffNet(M.Model):
 		for r,k,i,o,s,e in zip(config.repeats, config.ksize[1:], config.out_chnnels[:-1], config.out_chnnels[1:], config.strides[1:], config.expansions):
 			# print(r)
 			for num_blk in range(r):
-				self.blocks.append(MBConvBlock(i, o, e, k, s if num_blk==0 else 1))
+				self.blocks.append(MBConvBlock(i if num_blk==0 else o, o, e, k, s if num_blk==0 else 1))
 
 		self.emb_bn = M.BatchNorm()
 		self.fc1 = M.Dense(config.emb_size, batch_norm=True)
@@ -67,11 +68,11 @@ class EffNet(M.Model):
 		x = self.c1(x)
 		for block in self.blocks:
 			x = block(x)
-		print(x.shape)
+		# print(x.shape)
 		x = M.flatten(x)
 		x = self.emb_bn(x)
 		if tf.keras.backend.learning_phase():
-			x = tf.nn.dropout(x, 0.4)
+			x = tf.nn.dropout(x, 0.2)
 		x = self.fc1(x)
 		return x
 
