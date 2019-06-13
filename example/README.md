@@ -35,3 +35,5 @@
 - MNIST (Everthing begins here)
 
 - Model conversion (from torch to tf)
+
+- Flop test 
