@@ -743,7 +743,8 @@ class activation(KLayer):
 			res =  tf.sigmoid(x)
 		elif self.param == 7:
 			# res = tf.nn.swish(x)
-			res = tf.sigmoid(x) * x 
+			# res = tf.sigmoid(x) * x 
+			res = swish(x)
 		else:
 			res =  x
 		return res
@@ -1189,3 +1190,11 @@ def gradient_reverse(x):
 	def grad(dy):
 		return -dy 
 	return x, grad
+
+@tf.custom_gradient
+def swish(x):
+	o = tf.sigmoid(x) * x
+	def grad(dy):
+		g = o * (1. + x * (1. - o))
+		return dy * g 
+	return o, grad 
