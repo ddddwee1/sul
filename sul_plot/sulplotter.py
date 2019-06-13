@@ -262,9 +262,9 @@ class LossPlotterJson():
 		self.keys = keys
 		self.alpha = alpha
 		if scales is None:
-			scales = [1 for _ in range(len(losses))]
+			self.scales = [1 for _ in range(len(losses))]
 		else:
-			scales = scales
+			self.scales = scales
 
 	def apply_ema(self, ignore_index=0):
 		def ema(arr):
@@ -277,7 +277,9 @@ class LossPlotterJson():
 
 	def plot(self):
 		x = np.float32(list(range(len(self.losses[0]))))
-		for d,lb in zip(self.losses, self.keys):
+		for d,lb,s in zip(self.losses, self.keys, self.scales):
+			d = np.float32(d)
+			d = d * s 
 			self.ax.plot(x, d, label=lb)
 
 	def set_title(self, title):
