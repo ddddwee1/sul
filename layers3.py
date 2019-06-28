@@ -1193,8 +1193,9 @@ def gradient_reverse(x):
 
 @tf.custom_gradient
 def swish(x):
-	o = tf.sigmoid(x) * x
+	sig = tf.sigmoid(x)
+	o = sig * x
 	def grad(dy):
-		g = o * (1. + x * (1. - o))
+		g = sig * (1. + x * (1. - sig))
 		return dy * g 
 	return o, grad 
