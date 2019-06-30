@@ -721,7 +721,8 @@ class LSTM(Model):
 		for i in range(len(x)):
 			next_inp = x[i]
 			if next_inp is None:
-				next_inp = tf.stop_gradient(h_next)
+				# next_inp = tf.stop_gradient(self.h)
+				next_inp = self.h
 			else:
 				next_inp = tf.convert_to_tensor(next_inp)
 			if self.h is None:
