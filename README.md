@@ -53,10 +53,10 @@ Examples in './example/'
 
 To install, run
 ```
-pip install tf-nightly-gpu-2.0-preview
+pip install tensorflow-gpu==2.0.0-beta1
 ```
 
-Remember to change registry if using Windows.
+If error occurs and you are using Windows:
 
 1. Start the registry editor (regedit.exe)
 
