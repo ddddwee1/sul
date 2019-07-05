@@ -6,6 +6,9 @@ from tensorflow.keras import Model as KModel
 import random
 from tensorflow.python.training.tracking.data_structures import NoDependency
 import json 
+import abc 
+from abc import ABC
+from multiprocessing.pool import ThreadPool
 
 # activation const
 PARAM_RELU = 0
@@ -855,6 +858,50 @@ class DataReader():
 
 	def __next__(self):
 		return self.get_next()
+
+class ThreadReader(ABC):
+	def __init__(self, bsize, processes=1, **kwargs):
+		self.__dict__.update(kwargs)
+		self.kwargs = kwargs
+		self.bsize = bsize
+		self.pos = 0
+		self.epoch = 0
+		self.data = self._get_data()
+		self.pool = ThreadPool(processes=processes)
+		self._prefetch()
+
+	@abc.abstractmethod
+	def _get_data(self):
+		pass 
+
+	def _prefetch(self):
+		if self.pos + self.bsize > len(self.data):
+			self.pos = 0
+			self.epoch += 1
+			self._new_epoch()
+		batch = self._next_iter()
+		self.p = self.pool.map_async(self._process_data, batch)
+
+	@abc.abstractmethod
+	def _next_iter(self):
+		pass 
+
+	def _new_epoch(self):
+		pass 
+
+	@abc.abstractmethod
+	def _process_data(self):
+		pass 
+
+	def get_next(self):
+		batch = self.p.get()
+		batch = self._post_process(batch)
+		self._prefetch()
+		return batch
+
+	def _post_process(self, x):
+		return x 
+
 
 ######## Parallel Training #########
 class ParallelTraining():

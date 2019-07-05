@@ -494,7 +494,7 @@ class deconv2D(KLayer):
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
 		if self.usebias:
 			if self.values is not None:
 				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
