@@ -736,6 +736,38 @@ class LSTM(Model):
 			outs.append(self.h)
 		return outs 
 
+class ConvLSTM(Model):
+	def initialize(self, chn):
+		self.gx = M.ConvLayer(3, chn)
+		self.gh = M.ConvLayer(3, chn)
+		self.fx = M.ConvLayer(3, chn)
+		self.fh = M.ConvLayer(3, chn)
+		self.ox = M.ConvLayer(3, chn)
+		self.oh = M.ConvLayer(3, chn)
+		self.gx = M.ConvLayer(3, chn)
+		self.gh = M.ConvLayer(3, chn)
+
+	def forward(self, x, c, h):
+		gx = self.gx(x)
+		gh = self.gh(h)
+
+		ox = self.ox(x)
+		oh = self.oh(h)
+
+		fx = self.fx(x)
+		fh = self.fh(h)
+
+		gx = self.gx(x)
+		gh = self.gh(h)
+
+		g = tf.tanh(gx + gh)
+		o = tf.sigmoid(ox + oh)
+		i = tf.sigmoid(ix + ih)
+		f = tf.sigmoid(fx + fh)
+
+		cell = f*c + i*g 
+		h = o * tf.tanh(cell)
+		return cell, h 
 
 ###############
 # alias for layers
