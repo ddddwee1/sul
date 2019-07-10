@@ -77,3 +77,22 @@ class Reprojection(M.Model):
 		x = tf.reshape(x, [-1, 17, 3])
 		x = tf.matmul(x, K)
 		return x 
+
+class RepNet(M.Model):
+	def initialize(self):
+		self.gen = GenNet()
+		self.crit = CritNet()
+		self.cam = CamNet()
+		self.rep = Reprojection()
+	def forward(self, x):
+		pred = self.gen(pred)
+		K = self.cam()
+		K = tf.reshape(K, [-1, 2, 3])
+		reprojected = self.rep(pred, K)
+		crit = self.crit(pred)
+		return pred, K, reprojected, crit
+	def predict(self, x):
+		pred = self.gen(x)
+		return x 
+	def get_gen_vars(self):
+		return self.gen.trainable_variables + self.cam.trainable_variables
