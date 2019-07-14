@@ -86,8 +86,8 @@ class ConvLSTM(M.Model):
 		self.fh = M.ConvLayer(3, chn)
 		self.ox = M.ConvLayer(3, chn)
 		self.oh = M.ConvLayer(3, chn)
-		self.gx = M.ConvLayer(3, chn)
-		self.gh = M.ConvLayer(3, chn)
+		self.ix = M.ConvLayer(3, chn)
+		self.ih = M.ConvLayer(3, chn)
 
 	def forward(self, x, c, h):
 		gx = self.gx(x)
@@ -99,8 +99,8 @@ class ConvLSTM(M.Model):
 		fx = self.fx(x)
 		fh = self.fh(h)
 
-		gx = self.gx(x)
-		gh = self.gh(h)
+		ix = self.ix(x)
+		ih = self.ih(h)
 
 		g = tf.tanh(gx + gh)
 		o = tf.sigmoid(ox + oh)
