@@ -76,3 +76,7 @@ def ljspeech(path) :
 			split = line.split('|')
 			text_dict[split[0]] = split[-1]
 	return text_dict
+
+#### text encoding ###
+def text2seq(textdict, cleaner):
+	pass 
