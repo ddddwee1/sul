@@ -32,7 +32,7 @@ def create_gta(model, trainset, savepath):
 		print(f'{i}/{iters}')
 
 if __name__=='__main__':
-	model = network.Taco()
+	model = network.Tacotron()
 
 	saver = M.Saver(model)
 	saver.restore(config.model_folder)
