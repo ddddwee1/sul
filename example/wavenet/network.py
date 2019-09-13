@@ -1,6 +1,6 @@
 import tensorflow as tf 
 import model3 as M 
-from tf.keras.layers import GRU, Bidirectional
+from tensorflow.keras.layers import GRU, Bidirectional, LSTM, GRUCell
 
 class HighwayNet(M.Model):
 	def initialize(self, size):
@@ -14,16 +14,16 @@ class HighwayNet(M.Model):
 		return y 
 
 class PreNet(M.Model):
-	def initialize(self, out1, out2, dropout=0.5):
+	def initialize(self, out1=256, out2=128, dropout=0.5):
 		self.fc1 = M.Dense(out1, activation=M.PARAM_RELU)
 		self.fc2 = M.Dense(out2, activation=M.PARAM_RELU)
 		self.dropout = dropout
 	def forward(self, x):
 		x = self.fc1(x)
-		if tf.keras.backend.training_phase():
+		if tf.keras.backend.learning_phase():
 			x = tf.nn.dropout(x, self.dropout)
 		x = self.fc2(x)
-		if tf.keras.backend.training_phase():
+		if tf.keras.backend.learning_phase():
 			x = tf.nn.dropout(x, self.dropout)
 		return x 
 
@@ -34,7 +34,7 @@ class CBHG(M.Model):
 		for k in self.kernels:
 			conv = M.ConvLayer1D(k, channels, batch_norm=True, usebias=False, activation=M.PARAM_RELU)
 			self.conv1d_bank.append(conv)
-		self.maxpool = M.MaxPool1D(2, 1) # implement this later
+		self.maxpool = M.MaxPool(2, 1) # implement this later
 		
 		self.conv_proj1 = M.ConvLayer1D(3, proj_chn[0], batch_norm=True, usebias=False, activation=M.PARAM_RELU)
 		self.conv_proj2 = M.ConvLayer1D(3, proj_chn[1], batch_norm=True, usebias=False)
@@ -47,7 +47,7 @@ class CBHG(M.Model):
 			hw = HighwayNet(channels)
 			self.highways.append(hw)
 
-		self.rnn = Bidirectional(GRU(channels)) # implement this later
+		self.rnn = Bidirectional(GRU(channels,return_sequences=True)) # implement this later
 
 	def forward(self, x):
 		residual = x 
@@ -65,12 +65,14 @@ class CBHG(M.Model):
 
 		x = x + residual
 
+		print('XSHAPE',x.shape)
+
 		if hasattr(self, 'pre_highway'):
 			x = self.pre_highway(x)
 		for hw in self.highways:
 			x = hw(x)
 
-		x, _ = self.rnn(x)
+		x = self.rnn(x)
 		return x 
 
 class Attention(M.Model):
@@ -117,13 +119,15 @@ class Encoder(M.Model):
 	def initialize(self, embed_dim, num_chars, cbhg_chn, K, num_highway, dropout):
 		self.num_chars = num_chars
 		self.embedding = M.Dense(embed_dim)
-		self.prenet = PreNet(embed_dim)
+		self.prenet = PreNet()
 		self.cbhg = CBHG(K=K, channels=cbhg_chn, proj_chn=[cbhg_chn, cbhg_chn], num_highway=num_highway)
 
 	def forward(self, x):
 		x = tf.one_hot(x, depth=self.num_chars)
 		x = self.embedding(x)
+		x = self.prenet(x)
 		x = self.cbhg(x)
+		print('ENC',x.shape)
 		return x 
 
 class Decoder(M.Model):
@@ -131,12 +135,12 @@ class Decoder(M.Model):
 		self.max_r = 20 
 		self.r = None 
 		self.n_mel = n_mel
-		self.prenet = PreNet(n_mel)
+		self.prenet = PreNet()
 		self.att_net = LSA(dec_dim)
-		self.att_rnn = GRU(dec_dim)
+		self.att_rnn = GRUCell(dec_dim)
 		self.rnn_inp = M.Dense(lstm_dim)
-		self.res_rnn1 = M.LSTM(lstm_dim)
-		self.res_rnn2 = M.LSTM(lstm_dim)
+		self.res_rnn1 = LSTM(lstm_dim)
+		self.res_rnn2 = LSTM(lstm_dim)
 		self.mel_proj = M.Dense(n_mel * self.max_r, usebias=False)
 
 	def zoneout(self, prev, curr, rate=0.1):
@@ -152,7 +156,7 @@ class Decoder(M.Model):
 		attn_rnn_in = tf.concat([context_vec, pre_out], axis=-1)
 
 		# next attention hidden state
-		attn_hid = self.attn_rnn(attn_rnn_in, attn_hid)
+		attn_hid = self.att_rnn(attn_rnn_in, [attn_hid])
 
 		scrs = self.att_net(enc_seq_proj, attn_hid, t)
 
@@ -163,14 +167,14 @@ class Decoder(M.Model):
 		x = self.rnn_inp(x)
 		rnn1_hid2, rnn1_cell = self.res_rnn1(x, rnn1_hid, rnn1_cell)
 
-		if tf.keras.backend.training_phase():
+		if tf.keras.backend.learning_phase():
 			rnn1_hid = self.zoneout(rnn1_hid, rnn1_hid2)
 		else:
 			rnn1_hid = rnn1_hid2
 		x = x + rnn1_hid
 
 		rnn2_hid2, rnn2_cell = self.res_rnn2(x, rnn2_hid, rnn2_cell)
-		if tf.keras.backend.training_phase():
+		if tf.keras.backend.learning_phase():
 			rnn2_hid = self.zoneout(rnn2_hid, rnn2_hid2)
 		else:
 			rnn2_hid = rnn2_hid2
@@ -192,10 +196,11 @@ class Tacotron(M.Model):
 		self.encoder = Encoder(embed_dim, num_chars, enc_dim, enc_K, num_highway, dropout)
 		self.enc_proj = M.Dense(dec_dim, usebias=False)
 		self.decoder = Decoder(n_mels, dec_dim, lstm_dim)
-		self.postnet = CBHG(postnet_K, n_mels, postnet_dim, [256, 80], num_highway)
+		self.postnet = CBHG(postnet_K, postnet_dim, [256, 80], num_highway)
 		self.post_proj = M.Dense(fft_bins, usebias=False)
 
 	def set_r(self, r):
+		print('SET R:',r)
 		self.decoder.r = r 
 		self.r = r 
 
@@ -214,15 +219,18 @@ class Tacotron(M.Model):
 
 		context_vec = tf.zeros([bsize, self.dec_dim])
 
+		print(x.shape)
 		enc_seq = self.encoder(x)
+		print('abc',enc_seq.shape)
 		enc_seq_proj = self.enc_proj(enc_seq)
+		print('abc',enc_seq_proj.shape)
 
 		mel_outs, attn_scrs = [] , []
 
 		for t in range(0, step, self.r):
 			prenet_in = m[:,:,t-1] if t>0 else go_frame
 			mels, scrs, hid_states, cell_states, context_vec = self.decoder(enc_seq, enc_seq_proj, 
-																			prenet_in, hid_states, hid_states, cell_states, context_vec, t)
+																			prenet_in, hid_states, cell_states, context_vec, t)
 			mel_outs.append(mels)
 			attn_scrs.append(scrs)
 		mel_outs = tf.concat(mel_outs, axis=2)
@@ -236,9 +244,9 @@ class Tacotron(M.Model):
 
 		return mel_outs, linear, attn_scrs
 
-	def forward(self, x, steps=20000):
+	def generate(self, x, steps=20000):
 		tf.keras.backend.set_learning_phase(False)
-
+		x = tf.convert_to_tensor(x)
 		bsize = 1 
 		x = tf.expand_dims(x, axis=0)
 		attn_hid = tf.zeros([bsize, self.dec_dim])
@@ -263,7 +271,7 @@ class Tacotron(M.Model):
 																			prenet_in, hid_states, hid_states, cell_states, context_vec, t)
 			mel_outs.append(mels)
 			attn_scrs.append(scrs)
-			if (mels)
+			if (mels < -3.8).all() and t > 10: break
 		mel_outs = tf.concat(mel_outs, axis=2)
 
 		post_out = self.postnet(mel_outs)

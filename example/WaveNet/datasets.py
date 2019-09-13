@@ -3,6 +3,8 @@ import model3 as M
 import random
 import numpy as np 
 from text import text_to_sequence
+import config
+import util 
 
 def get_tts_dataset(path, bsize, r):
 	with open(f'{path}dataset.pkl','rb') as f:
@@ -19,13 +21,14 @@ def get_tts_dataset(path, bsize, r):
 	with open(f'{path}text_dict.pkl','rb') as f:
 		text_dict = pickle.load(f)
 
-	trainset = TTSDataSet(path, dataset_ids, text_dict, mel_lengths, bsize, bsize*3)
+	trainset = TTSDataSet(path, dataset_ids, text_dict, mel_lengths, bsize, bsize*3, r)
 
 	return trainset 
 
 class TTSDataSet():
-	def __init__(self, path, dataids, text_dict, mel_lengths, bsize, binsize):  # add bsize here
+	def __init__(self, path, dataids, text_dict, mel_lengths, bsize, binsize, r):  # add bsize here
 		self.path = path 
+		self.r = r 
 		self.dataids = dataids
 		self.text_dict = text_dict
 		self.mel_lengths = mel_lengths
@@ -45,6 +48,7 @@ class TTSDataSet():
 		return np.pad(x, ((0,0), (0, max_len-x.shape[-1])), mode='constant')
 
 	def collate(self, batch):
+		r = self.r
 		lengths = [len(x[0]) for x in batch]
 		max_len = max(lengths)
 		chars = np.stack([self.pad_1d(x[0], max_len) for x in batch])
@@ -60,12 +64,13 @@ class TTSDataSet():
 		mel = np.float32(mel)
 		mel = mel * 8 - 4
 
-		chars = np.long(chars)
+		# print(chars.shape)
+		chars = np.int32(chars)
 		return chars, mel, ids, mel_lens
 
 	def getitem(self, index):
 		idd = self.dataids[index]
-		x = util.text_to_sequence(self.text_dict[idd], config.tts_cleaner_names)
+		x = text_to_sequence(self.text_dict[idd], config.tts_cleaner_names)
 		mel = np.load(f'{config.melpath}{idd}.npy')
 		mel_len = mel.shape[-1]
 		return x, mel, idd, mel_len
