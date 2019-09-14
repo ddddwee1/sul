@@ -795,13 +795,21 @@ class fcLayer(KLayer):
 		"""
 		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
 		"""
+		shape, dim = x.shape, len(x.shape)
+		if dim==3:
+			x = tf.reshape(x, [-1, shape[2]])
+
 		if self.norm:
 			k = tf.nn.l2_normalize(self.kernel, axis=0)
+			x = tf.nn.l2_normalize(x, axis=1)
 		else:
 			k = self.kernel
 		res = tf.matmul(x, k)
 		if self.usebias:
 			res = tf.nn.bias_add(res, self.bias)
+
+		if dim==3:
+			res = tf.reshape(res, [shape[0], shape[1], -1])
 		return res 
 
 class batch_norm(KLayer):
