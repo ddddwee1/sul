@@ -1,3 +1,5 @@
+from text.symbols import symbols
+
 raw_path = './LJSpeech/'
 data_path = './data/'
 
@@ -22,10 +24,10 @@ fmin = 40
 # GTA PARAM
 gta_path = './gta/'
 model_folder = './model_gta/'
-schedule = [(7,  1e-3,  10_000,  32),   # progressive training schedule
-			(5,  1e-4, 100_000,  32),   # (r, lr, step, batch_size)
-			(2,  1e-4, 180_000,  16),
-			(1,  1e-4, 350_000,  8)]
+schedule = [(7,  1e-3,  20,  32),   # progressive training schedule
+			(5,  1e-4,  30,  32),   # (r, lr, step, batch_size)
+			(2,  1e-4,  30,  16),
+			(1,  1e-4,  30,  8)]
 
 tts_cleaner_names = ['english_cleaners']
 
@@ -46,3 +48,5 @@ tts_bin_lengths = True              # bins the spectrogram lengths before sampli
 tts_clip_grad_norm = 1.0            # clips the gradient norm to prevent explosion - set to None if not needed
 tts_checkpoint_every = 2_000        # checkpoints the model every X steps
 # TODO: tts_phoneme_prob = 0.0              # [0 <-> 1] probability for feeding model phonemes vrs graphemes
+
+num_chars = len(symbols)

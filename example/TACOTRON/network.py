@@ -49,9 +49,9 @@ class CBHG(M.Model):
 			self.highways.append(hw)
 
 		self.rnn = Bidirectional(GRU(channels,return_sequences=True)) # implement this later
+		# self.last_proj = M.Dense(channels*2)
 
 	def forward(self, x):
-		# print('CBHGIN',x.shape)
 		residual = x 
 		seqlen = x.shape[1]
 		convbank = []
@@ -67,14 +67,13 @@ class CBHG(M.Model):
 
 		x = x + residual
 
-		print('XSHAPE',x.shape)
-
 		if hasattr(self, 'pre_highway'):
 			x = self.pre_highway(x)
 		for hw in self.highways:
 			x = hw(x)
 
 		x = self.rnn(x)
+		# x = self.last_proj(x)
 		return x 
 
 class Attention(M.Model):
@@ -125,11 +124,9 @@ class Encoder(M.Model):
 		self.cbhg = CBHG(K=K, channels=cbhg_chn, proj_chn=[cbhg_chn, cbhg_chn], num_highway=num_highway)
 
 	def forward(self, x):
-		x = tf.one_hot(x, depth=self.num_chars)
 		x = self.embedding(x)
 		x = self.prenet(x)
 		x = self.cbhg(x)
-		# print('ENC',x.shape)
 		return x 
 
 class Decoder(M.Model):
@@ -151,13 +148,13 @@ class Decoder(M.Model):
 		return prev * mask + (1 - mask) * curr
 
 	def forward(self, enc_seq, enc_seq_proj, prenet_in, hid_states, cell_states, context_vec, t):
+		t1 = time.time()
 		enc_shape = enc_seq.shape 
 		attn_hid, rnn1_hid, rnn2_hid = hid_states
 		rnn1_cell, rnn2_cell = cell_states
 		pre_out = self.prenet(prenet_in)
 		attn_rnn_in = tf.concat([context_vec, pre_out], axis=-1)
 
-		# print(attn_rnn_in.shape)
 		# next attention hidden state
 		attn_hid = self.att_rnn(attn_rnn_in, [attn_hid])[0]
 
@@ -168,7 +165,7 @@ class Decoder(M.Model):
 
 		x = tf.concat([context_vec, attn_hid], axis=1)
 		x = self.rnn_inp(x)
-		# print('XSHAPE',x.shape)
+
 		_, (rnn1_hid2, rnn1_cell) = self.res_rnn1(x, (rnn1_hid, rnn1_cell))
 
 		if tf.keras.backend.learning_phase():
@@ -189,6 +186,7 @@ class Decoder(M.Model):
 
 		hid_states = (attn_hid, rnn1_hid, rnn2_hid)
 		cell_states = (rnn1_cell, rnn2_cell)
+		# print('DECODER LOOP', time.time() - t1)
 		return mels, scrs, hid_states, cell_states, context_vec
 
 class Tacotron(M.Model):
@@ -224,13 +222,10 @@ class Tacotron(M.Model):
 
 		context_vec = tf.zeros([bsize, self.dec_dim])
 
-		# print(x.shape)
 		t1 = time.time()
 		enc_seq = self.encoder(x)
-		# print('abc',enc_seq.shape)
 		t2 = time.time()
 		enc_seq_proj = self.enc_proj(enc_seq)
-		# print('abc',enc_seq_proj.shape)
 
 		mel_outs, attn_scrs = [] , []
 		t3 = time.time()
@@ -240,20 +235,16 @@ class Tacotron(M.Model):
 																			prenet_in, hid_states, cell_states, context_vec, t)
 			mel_outs.append(mels)
 			attn_scrs.append(scrs)
+		t4 = time.time()
 		mel_outs = tf.concat(mel_outs, axis=2)
 		mel_outs_t = tf.transpose(mel_outs, [0,2,1])
-		t4 = time.time()
-
-		# print('MEL_OUTS', mel_outs.shape)
+		
 		post_out = self.postnet(mel_outs_t)
 		linear = self.post_proj(post_out)
 		linear = tf.transpose(linear, [0,2,1])
 		t5 = time.time()
 
-		print('T', t2-t1, t3-t2, t4-t3, t5-t4)
-
-		# print('FINAL_OUTS:', mel_outs.shape, linear.shape)
-		# input('LINE248PAUSE')
+		# print('T', t2-t1, t3-t2, t4-t3, t5-t4)
 
 		# useless for me
 		attn_scrs = tf.concat(attn_scrs, axis=1)

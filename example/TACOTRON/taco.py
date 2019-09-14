@@ -49,7 +49,7 @@ def grad_loss(x,m):
 	t1 = time.time()
 	grads = tape.gradient(loss, model.trainable_variables)
 	t2 = time.time()
-	print('Time grad:', t2-t1)
+	# print('Time grad:', t2-t1)
 	return grads, loss
 
 def tts_train_loop(optim, trainset, epochs):

@@ -5,6 +5,9 @@ import numpy as np
 from text import text_to_sequence
 import config
 import util 
+from multiprocessing.pool import ThreadPool
+
+import time 
 
 def get_tts_dataset(path, bsize, r):
 	with open(f'{path}dataset.pkl','rb') as f:
@@ -27,6 +30,7 @@ def get_tts_dataset(path, bsize, r):
 
 class TTSDataSet():
 	def __init__(self, path, dataids, text_dict, mel_lengths, bsize, binsize, r):  # add bsize here
+		self.eye = np.eye(config.num_chars).astype(np.float32)
 		self.path = path 
 		self.r = r 
 		self.dataids = dataids
@@ -40,6 +44,13 @@ class TTSDataSet():
 		# positional pointer 
 		self.pos = 0
 		self.maxiters = len(self.idx_sorted) // self.bsize + int(len(self.idx_sorted)%self.bsize==0)
+		self.pool = ThreadPool(processes=1)
+		self._prefetch()
+
+	def next_epoch(self):
+		print('Datareader: Next Epoch.')
+		self.indices = self.gen_indices()
+		self.pos = 0
 
 	def pad_1d(self, x, max_len):
 		return np.pad(x, (0, max_len-len(x)), mode='constant')
@@ -66,6 +77,7 @@ class TTSDataSet():
 
 		# print(chars.shape)
 		chars = np.int32(chars)
+		chars = self.eye[chars]
 		return chars, mel, ids, mel_lens
 
 	def getitem(self, index):
@@ -93,14 +105,28 @@ class TTSDataSet():
 			binned_idx = np.concatenate([binned_idx, last_bin])
 		return binned_idx
 
-	def get_next(self):
+	def _next(self):
+		# t1 = time.time()
 		pos2 = min(self.pos + self.bsize, len(self.indices))
 		idx = self.indices[self.pos: pos2]
 		self.pos = pos2
+		if pos2==len(self.indices):
+			self.next_epoch()
 		batch = []
 		for i in idx:
 			batch.append(self.getitem(i))
+		# t2 = time.time()
 		batch = self.collate(batch)
+		# t3 = time.time()
+		# print(t2-t1, t3-t2, 'DATAREADER_TIMER')
+		return batch
+
+	def _prefetch(self):
+		self.p = self.pool.apply_async(self._next)
+
+	def get_next(self):
+		batch = self.p.get()
+		self._prefetch()
 		return batch
 		
 	def __len__(self):
