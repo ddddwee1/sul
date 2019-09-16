@@ -618,7 +618,7 @@ class OctSplit(Model):
 
 class MarginalCosineLayer(Model):
 	def initialize(self, num_classes):
-		self.classifier = Dense(num_classes, usebias=False, norm=True)
+		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
 	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
 		# res = cos(m1t + m2) + m3
 		# this loss will cause potential unstable
@@ -627,23 +627,28 @@ class MarginalCosineLayer(Model):
 		x = self.classifier(x)
 		if not(m1==1.0 and m2==0.0):
 			t = tf.gather_nd(x, indices=tf.where(label>0.)) #shape: [N]
-			t = tf.math.acos(t)
-			### original ###
-			# if m1!=1.0:
-			# 	t = t*m1
-			# if m2!=0.0:
-			# 	t = t+m2 
-			### end ###
-			### experimental: to limit the value not exceed pi ###
-			if m1!=1.0:
-				t = t*m1
-				t1 = t * np.pi / tf.stop_gradient(t)
-				t = tf.minimum(t,t1)
-			if m2!=0.0:
-				t = t+m2 
-				t1 = t + np.pi - tf.stop_gradient(t)
-				t = tf.minimum(t,t1)
-			t = tf.math.cos(t)
+			if tf.keras.backend.floatx()=='float16':
+				assert m1==1.0,'Only m1=1.0 is supported for fp16'
+				sint = tf.sqrt(1.0 - tf.square(t))
+				t = t * tf.cast(tf.cos(m2), tf.float16) - sint * tf.cast(tf.sin(m2), tf.float16)
+			else:
+				t = tf.math.acos(t)
+				### original ###
+				# if m1!=1.0:
+				# 	t = t*m1
+				# if m2!=0.0:
+				# 	t = t+m2 
+				### end ###
+				### experimental: to limit the value not exceed pi ###
+				if m1!=1.0:
+					t = t*m1
+					t1 = t * np.pi / tf.stop_gradient(t)
+					t = tf.minimum(t,t1)
+				if m2!=0.0:
+					t = t+m2 
+					t1 = t + np.pi - tf.stop_gradient(t)
+					t = tf.minimum(t,t1)
+				t = tf.math.cos(t)
 			t = tf.expand_dims(t, axis=1)
 			x = x*(1-label) + t*label
 		x = x - label * m3

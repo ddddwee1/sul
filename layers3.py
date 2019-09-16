@@ -98,14 +98,14 @@ class conv2D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		if self.pad == 'SAME_LEFT':
 			self.pad_value = [self.size[0]//2, self.size[1]//2]
 
@@ -181,14 +181,14 @@ class conv3D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		
 	def call(self,x):
 		"""
@@ -248,14 +248,14 @@ class conv1D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
 		"""
@@ -328,14 +328,14 @@ class dwconv2D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		if self.pad == 'SAME_LEFT':
 			self.pad_value = [self.size[0]//2, self.size[1]//2]
 
@@ -408,14 +408,14 @@ class deconv1D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
 		"""
@@ -492,14 +492,14 @@ class deconv2D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
 		"""
@@ -576,14 +576,14 @@ class deconv3D(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outchn], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 		
 	def call(self, x):
 		"""
@@ -782,14 +782,14 @@ class fcLayer(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outsize], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outsize], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 
 	def call(self, x):
 		"""
@@ -841,17 +841,17 @@ class batch_norm(KLayer):
 		values = self.values
 		shape = input_shape[-1]
 		if self.values is None:
-			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(0.0),trainable=False)
-			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(1.0),trainable=False)
+			self.moving_average = self.add_variable('moving_average',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(0.0),trainable=False)
+			self.variance = self.add_variable('variance',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(1.0),trainable=False)
 
-			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(1.0),trainable=True)
-			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(0.0),trainable=True)
+			self.gamma = self.add_variable('gamma',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(1.0),trainable=True)
+			self.beta = self.add_variable('beta',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(0.0),trainable=True)
 		else:
-			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(self.values[0]),trainable=False)
-			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(values[1]),trainable=False)
+			self.moving_average = self.add_variable('moving_average',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(self.values[0]),trainable=False)
+			self.variance = self.add_variable('variance',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[1]),trainable=False)
 
-			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(values[2]),trainable=True)
-			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(values[3]),trainable=True)
+			self.gamma = self.add_variable('gamma',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[2]),trainable=True)
+			self.beta = self.add_variable('beta',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[3]),trainable=True)
 
 	def update(self,variable,value):
 		delta = (variable - value) * self.decay
@@ -877,11 +877,14 @@ class batch_norm(KLayer):
 		elif inp_dim_num==5:
 			x = tf.reshape(x, [inp_shape[0], inp_shape[1], inp_shape[2]*inp_shape[3], inp_shape[4]])
 		if is_training:
-			res, mean, var = tf.compat.v1.nn.fused_batch_norm(x, self.gamma, self.beta, None, None, self.epsilon, is_training=is_training)
+			# res, mean, var = tf.compat.v1.nn.fused_batch_norm(x, self.gamma, self.beta, None, None, self.epsilon, is_training=is_training)
+			mean, var = tf.nn.moments(x, axes=[0,1,2])
+			res = (x - mean) / tf.sqrt(self.epsilon + var) * self.gamma + self.beta
 			self.update(self.moving_average, mean)
 			self.update(self.variance, var)
 		else:
-			res, mean, var = tf.compat.v1.nn.fused_batch_norm(x, self.gamma, self.beta, self.moving_average, self.variance, self.epsilon, is_training=is_training)
+			res = (x - self.moving_average) / tf.sqrt(self.epsilon + self.variance) * self.gamma + self.beta
+			# res, mean, var = tf.compat.v1.nn.fused_batch_norm(x, self.gamma, self.beta, self.moving_average, self.variance, self.epsilon, is_training=is_training)
 		if inp_dim_num==3:
 			res = tf.squeeze(res , axis=1)
 		elif inp_dim_num==2:
@@ -919,17 +922,17 @@ class inst_norm(KLayer):
 		values = self.values
 		shape = input_shape[-1]
 		if self.values is None:
-			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(0.0),trainable=False)
-			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(1.0),trainable=False)
+			self.moving_average = self.add_variable('moving_average',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(0.0),trainable=False)
+			self.variance = self.add_variable('variance',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(1.0),trainable=False)
 
-			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(1.0),trainable=True)
-			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(0.0),trainable=True)
+			self.gamma = self.add_variable('gamma',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(1.0),trainable=True)
+			self.beta = self.add_variable('beta',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(0.0),trainable=True)
 		else:
-			self.moving_average = self.add_variable('moving_average',[shape],initializer=tf.initializers.constant(self.values[0]),trainable=False)
-			self.variance = self.add_variable('variance',[shape],initializer=tf.initializers.constant(values[1]),trainable=False)
+			self.moving_average = self.add_variable('moving_average',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(self.values[0]),trainable=False)
+			self.variance = self.add_variable('variance',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[1]),trainable=False)
 
-			self.gamma = self.add_variable('gamma',[shape],initializer=tf.initializers.constant(values[2]),trainable=True)
-			self.beta = self.add_variable('beta',[shape],initializer=tf.initializers.constant(values[3]),trainable=True)
+			self.gamma = self.add_variable('gamma',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[2]),trainable=True)
+			self.beta = self.add_variable('beta',[shape], dtype=tf.keras.backend.floatx(),initializer=tf.initializers.constant(values[3]),trainable=True)
 
 	def update(self,variable,value):
 		delta = (variable - value) * self.decay
@@ -1034,14 +1037,14 @@ class graphConvLayer(KLayer):
 		values = self.values
 		self._parse_args(input_shape)
 		if self.values is not None:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.constant(values[0]))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, initializer=tf.initializers.GlorotUniform())
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 		if self.usebias:
 			if self.values is not None:
-				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(values[1]))
+				self.bias = self.add_variable('bias', shape=[self.outsize], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
 			else:
-				self.bias = self.add_variable('bias', shape=[self.outsize], initializer=tf.initializers.constant(0.0))
+				self.bias = self.add_variable('bias', shape=[self.outsize], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(0.0))
 
 	def _normalize_adj_mtx(self, mtx):
 		S = tf.reduce_sum(mtx, axis=1)
@@ -1119,7 +1122,7 @@ class bilinearUpSample(KLayer):
 	def get_kernel(self, dim, chn, factor):
 		filter_size = 2*factor - factor%2
 		shape = [filter_size] * (dim-2) + [chn, chn]
-		weights = np.zeros(shape, dtype=np.float32)
+		weights = np.zeros(shape, dtype=tf.keras.backend.floatx())
 		if dim == 5:
 			k = self.upsample_kernel_3d(filter_size)
 			for i in range(chn):
@@ -1145,7 +1148,7 @@ class bilinearUpSample(KLayer):
 			self.outshape = [None, (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
 		self.stride = [1] + [self.factor]*(self.dim-2) + [1]
 		kernel = self.get_kernel(self.dim, self.num_chn, self.factor)
-		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, initializer=tf.initializers.constant(kernel))
+		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(kernel))
 
 	def call(self, x):
 		"""
@@ -1179,9 +1182,9 @@ class NALU(KLayer):
 		self.outdim = outdim
 	def build(self, input_shape):
 		indim = input_shape[-1]
-		self.W = self.add_variable('W', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
-		self.M = self.add_variable('M', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
-		self.G = self.add_variable('G', shape=[indim, self.outdim], initializer=tf.initializers.GlorotUniform())
+		self.W = self.add_variable('W', shape=[indim, self.outdim], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
+		self.M = self.add_variable('M', shape=[indim, self.outdim], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
+		self.G = self.add_variable('G', shape=[indim, self.outdim], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
 	def call(self,x):
 		"""
 		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
