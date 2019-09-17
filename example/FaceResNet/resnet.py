@@ -76,3 +76,8 @@ class ResNet(M.Model):
 		x = self.embedding(x)
 		return x 
 
+def Res100():
+	return ResNet([64,64,128,256,512],[3,13,30,3],512)
+
+def Res50():
+	return ResNet([64,64,128,256,512],[3,4,14,3],512)
