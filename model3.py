@@ -78,6 +78,8 @@ class Model(KModel):
 		Default function for class callables. Not recommended to touch.
 		"""
 		self.graph_initialized = True
+		if 'training' in kwargs:
+			kwargs.pop('training')
 		return self.forward(x, *args, **kwargs)
 
 	def forward(self, x, *args, **kwargs):
