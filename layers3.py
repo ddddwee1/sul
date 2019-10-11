@@ -1148,7 +1148,7 @@ class bilinearUpSample(KLayer):
 			self.outshape = [None, (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
 		self.stride = [1] + [self.factor]*(self.dim-2) + [1]
 		kernel = self.get_kernel(self.dim, self.num_chn, self.factor)
-		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(kernel))
+		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(kernel), trainable=False)
 
 	def call(self, x):
 		"""
