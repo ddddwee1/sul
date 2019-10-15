@@ -100,7 +100,8 @@ class conv2D(KLayer):
 		if self.values is not None:
 			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[0]))
 		else:
-			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
+			self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.GlorotUniform())
+			# self.kernel = self.add_variable('kernel', shape=self.size, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.VarianceScaling(scale=2.0, mode='fan_out', distribution='untruncated_normal'))
 		if self.usebias:
 			if self.values is not None:
 				self.bias = self.add_variable('bias', shape=[self.outchn], dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(values[1]))
@@ -505,7 +506,13 @@ class deconv2D(KLayer):
 		"""
 		:param x: Input tensor or numpy array. The object will be automatically converted to tensor if the input is np.array. Note that other arrays in args or kwargs will not be auto-converted.
 		"""
-		self.outshape[0] = x.get_shape().as_list()[0]
+		# self.outshape[0] = x.get_shape().as_list()[0]
+		input_shape = x.shape
+		# compute output shape
+		if self.pad=='SAME':
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1], input_shape[2]*self.stride[2], self.outchn]
+		else:
+			self.outshape = [input_shape[0], input_shape[1]*self.stride[1]+self.size[1]-self.stride[1], inp_shape[2]*self.stride[2]+self.size[2]-self.stride[2], self.outchn]
 		# x = tf.expand_dims(x, axis=1)
 		out = tf.nn.conv2d_transpose(x,self.kernel,self.outshape,self.stride,self.pad,dilations=self.dilation_rate)
 		if self.usebias:
@@ -1148,7 +1155,7 @@ class bilinearUpSample(KLayer):
 			self.outshape = [None, (input_shape[1]+2)*self.factor, (input_shape[2]+2)*self.factor, (input_shape[3]+2)*self.factor, input_shape[4]]
 		self.stride = [1] + [self.factor]*(self.dim-2) + [1]
 		kernel = self.get_kernel(self.dim, self.num_chn, self.factor)
-		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(kernel), trainable=False)
+		self.kernel = self.add_variable('kernel_upsample', shape=kernel.shape, dtype=tf.keras.backend.floatx(), initializer=tf.initializers.constant(kernel))
 
 	def call(self, x):
 		"""
