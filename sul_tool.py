@@ -44,3 +44,16 @@ def computeIOU(box1, box2):
 	union = (x4 - x3) * (y4 - y3) + (x2 - x1) * (y2 - y1) - inter
 	iou = inter / (union + 1)
 	return iou 
+
+def check_fps(fname):
+	video = cv2.VideoCapture(fname);
+	fps = video.get(cv2.CAP_PROP_FPS)
+	return fps 
+
+def combine_audio(vidname, audname, outname, fps=25):
+	import moviepy.editor as mpe
+	my_clip = mpe.VideoFileClip(vidname)
+	audio_background = mpe.AudioFileClip(audname)
+	final_clip = my_clip.set_audio(audio_background)
+	final_clip.write_videofile(outname,fps=fps)
+
