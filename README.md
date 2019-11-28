@@ -2,6 +2,10 @@
 
 Simple but useful layers
 
+I am working on SUL4 for a more modualized lib.
+
+It is just for my own use. 
+
 Whatever.
 
 Now updated to SUL3.0 for tf2
