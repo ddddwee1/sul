@@ -620,7 +620,7 @@ class OctSplit(Model):
 
 class MarginalCosineLayer(Model):
 	def initialize(self, num_classes):
-		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
+		self.classifier = Dense(num_classes, usebias=False, norm=True)
 	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
 		# res = cos(m1t + m2) + m3
 		# this loss will cause potential unstable
