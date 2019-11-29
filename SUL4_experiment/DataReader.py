@@ -1,6 +1,8 @@
 from multiprocessing import Pool 
 import numpy as np 
 import random 
+import time 
+import concurrent.futures
 
 # A simple data reader.
 # You must set: process function, sample policy (default random sample), process number (default 1), gpu number (default 1)
@@ -19,14 +21,20 @@ class DataReader():
 		self.gpus = gpus
 		self.policy = sample_policy
 		self.pool = Pool(processes=processes)
+		self.exe = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
 	def set_data(self, data):
 		self.data = data 
+		self.idx = list(range(len(self.data)))
 		if self.policy == 'EPOCH':
-			self.idx = list(range(len(self.data)))
+			random.shuffle(self.idx)
 			self.position = 0
 			self.epoch = 0
+			self.iter_per_epoch = len(self.idx) // self.bsize
 		print('DataReader: Data set.')
+
+	def set_param(self, params):
+		self.__dict__.update(params)
 
 	def set_process_fn(self, fn):
 		self.process_fn = fn 
@@ -34,19 +42,29 @@ class DataReader():
 
 	def set_post_process_fn(self, fn):
 		self.post_process_fn = fn 
+		print('DataReader: PostProcess function set.')
 
 	def get_next(self):
 		assert self.ps is not None, 'You must call prefetch before the first iteration'
-		result = self.ps.get()
+		result = self.ps.result()
+		self.prefetch()
+		return result
+
+	def prefetch(self):
+		self.ps = self.exe.submit(self._fetch_func)
+
+	def _fetch_func(self):
+		ps = self.prefetch_inner()
+		result = ps.get()
 		if self.gpus > 1:
 			result = self.split_data(result)
 			result = [self.post_process_fn(i) for i in result]
 		else:
 			result = self.post_process_fn(result)
-		self.prefetch()
 		return result
 
-	def prefetch(self):
+	def prefetch_inner(self):
+		# print('Prefetching..')
 		assert self.process_fn is not None, 'You must set process function first'
 		if self.policy == 'RANDOM':
 			idx = random.sample(self.idx, self.bsize)
@@ -56,9 +74,11 @@ class DataReader():
 				self.position = 0
 				self.epoch += 1
 			idx = self.idx[self.position:self.position+self.bsize]
+			self.position += self.bsize
 
 		res = [self.data[i] for i in idx]
-		self.ps = self.pool.map_async(self.process_fn, res)
+		ps = self.pool.map_async(self.process_fn, res)
+		return ps 
 
 	def split_data(self, data):
 		res = []
