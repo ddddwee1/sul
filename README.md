@@ -57,7 +57,7 @@ Examples in './example/'
 
 To install, run
 ```
-pip install tensorflow-gpu==2.0.0-beta1
+pip install tensorflow-gpu
 ```
 
 If error occurs and you are using Windows:
