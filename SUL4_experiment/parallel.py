@@ -15,15 +15,16 @@ class ParallelTraining():
 
 	@tf.function
 	def train_step(self, data):
-		rr = []
-		for idx,i in enumerate(self.devices):
-			with tf.device('/gpu:%d'%i):
-				rr.append(self.grad_loss_fn(data[idx], self.model))
-				print('Initalize GPU:%d'%i)
-		losses = []
-		grads = [i[0] for i in rr]
-		grads = [sum(g)/len(g) for g in zip(*grads)]
-		for i in rr:
-			losses.append(i[1])
-		self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+		with tf.device('/cpu:0'):
+			rr = []
+			for idx,i in enumerate(self.devices):
+				with tf.device('/gpu:%d'%i):
+					rr.append(self.grad_loss_fn(data[idx], self.model))
+					print('Initalize GPU:%d'%i)
+			losses = []
+			grads = [i[0] for i in rr]
+			grads = [sum(g)/len(g) for g in zip(*grads)]
+			for i in rr:
+				losses.append(i[1])
+			self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 		return losses
