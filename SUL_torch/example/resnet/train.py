@@ -27,7 +27,7 @@ def initialize(data, model):
 	model(x,y)
 
 if __name__=='__main__':
-	BSIZE = 256 * 6
+	BSIZE = 320 * 6
 	reader = datareader.get_datareader('../dataset/emore_asia_outs.txt', BSIZE, processes=16)
 	gpus = (0,1,2,3,4,5)
 	model = FaceRes100(reader.max_label + 1)

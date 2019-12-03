@@ -90,8 +90,7 @@ class conv2D(Model):
 		self.reset_params()
 
 	def reset_params(self):
-		# init.kaiming_uniform_(self.weight, a=math.sqrt(5))
-		init.normal_(self.weight, std=0.01)
+		init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 		if self.bias is not None:
 			fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
 			bound = 1 / math.sqrt(fan_in)
@@ -117,7 +116,8 @@ class fclayer(Model):
 		self.reset_params()
 
 	def reset_params(self):
-		init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+		# init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+		init.normal_(self.weight, std=0.01)
 		if self.bias is not None:
 			fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
 			bound = 1 / math.sqrt(fan_in)
@@ -126,9 +126,9 @@ class fclayer(Model):
 	def forward(self, x):
 		if self.norm:
 			norm = x.norm(p=2, dim=1, keepdim=True)
-			x_norm = x.div(norm.expand_as(x))
+			x = x / norm
 			wnorm = self.weight.norm(p=2,dim=1, keepdim=True)
-			weight = self.weight.div(wnorm.expand_as(self.weight))
+			weight = self.weight / wnorm
 		else:
 			weight = self.weight
 		return F.linear(x, weight, self.bias)

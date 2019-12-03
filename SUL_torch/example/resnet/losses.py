@@ -8,7 +8,6 @@ class MarginalCosineLayer(M.Model):
 	def initialize(self, num_classes):
 		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
 	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
-		# label = torch.from_numpy(label)
 		x = self.classifier(x)
 		if not (m1==1.0 and m2==0.0 and m3==0.0):
 			print('MarginalCosineLayer used.')
@@ -26,11 +25,9 @@ class MarginalCosineLayer(M.Model):
 class NLLLoss(M.Model):
 	def initialize(self):
 		self.lgsm = nn.LogSoftmax(dim=1)
-		self.lsfn = nn.NLLLoss()
+		# self.lsfn = nn.NLLLoss()
 	def forward(self, x, label):
 		x = self.lgsm(x)
-		# print('xshape',x.shape)
-		# loss = self.lsfn(x, label)
 		label = label.unsqueeze(-1)
 		loss = torch.gather(x, 1, label)
 		loss = -loss.mean()
