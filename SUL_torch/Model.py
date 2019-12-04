@@ -1,7 +1,9 @@
 import Layers as L 
 import numpy as np 
+import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
+import os 
 
 Model = L.Model
 activation = L.activation
@@ -21,30 +23,31 @@ PARAM_SWISH = 7
 
 class Saver():
 	def __init__(self, module):
-		self.module = module
+		self.model = module
 
 	def _get_checkpoint(self, path):
 		path = path.replace('\\','/')
 		ckpt = path + 'checkpoint'
 		if os.path.exists(ckpt):
-			fname = open(ckpt).read().strip()
+			fname = open(ckpt).readline().strip()
 			return path + fname
 		else:
 			return False
 
 	def restore(self, path):
 		if path[-4]=='.pth':
-			if isinstance(self.module, nn.DataParallel):
-				model.module.load_state_dict(torch.load(path))
+			if isinstance(self.model, nn.DataParallel):
+				self.model.module.load_state_dict(torch.load(path))
 			else:
-				model.load_state_dict(torch.load(path))
+				self.model.load_state_dict(torch.load(path))
 		else:
-			path = _get_checkpoint(path)
+			path = self._get_checkpoint(path)
 			if path:
-				if isinstance(self.module, nn.DataParallel):
-					model.module.load_state_dict(torch.load(path))
+				if isinstance(self.model, nn.DataParallel):
+					self.model.module.load_state_dict(torch.load(path))
 				else:
-					model.load_state_dict(torch.load(path))
+					self.model.load_state_dict(torch.load(path))
+				print('Model loaded from:', path)
 			else:
 				print('No checkpoint found. No restoration is performed.')
 
@@ -52,14 +55,14 @@ class Saver():
 		directory = os.path.dirname(path)
 		if not os.path.exists(directory):
 			os.makedirs(directory)
-		if isinstance(self.module, nn.DataParallel):
-			torch.save(model.module.state_dict(), path)
+		if isinstance(self.model, nn.DataParallel):
+			torch.save(self.model.module.state_dict(), path)
 		else:
-			torch.save(model.state_dict(), path)
-		ckpt = open(path + '/checkpoint', 'w')
+			torch.save(self.model.state_dict(), path)
+		print('Model saved to:',path)
+		ckpt = open(directory + '/checkpoint', 'w')
 		ckpt.write(os.path.basename(path))
 		ckpt.close()
-
 
 class ConvLayer(Model):
 	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, activation=-1, batch_norm=False, usebias=True, groups=1):

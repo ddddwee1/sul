@@ -11,6 +11,9 @@ import util
 import datareader 
 import time 
 
+torch.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True
+
 class FaceRes100(M.Model):
 	def initialize(self, num_classes):
 		self.resnet = resnet.Res100()
@@ -18,7 +21,7 @@ class FaceRes100(M.Model):
 
 	def forward(self, x, label):
 		feat = self.resnet(x)
-		logits = self.classifier(feat, label, 1.0, 0.2, 0.0)
+		logits = self.classifier(feat, label, 1.0, 0.35, 0.0)
 		logits = logits * 64
 		return logits
 
@@ -38,7 +41,8 @@ if __name__=='__main__':
 	initialize((imgs, labels), model)
 	# parallel training 
 	model = nn.DataParallel(model, device_ids=gpus).cuda()
-	model.module.load_state_dict(torch.load('./model/0000.pth.tar'))
+	saver = M.Saver(model)
+	saver.restore('./model/')
 	optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 	model.train()
 
@@ -57,8 +61,6 @@ if __name__=='__main__':
 			logits = model(imgs, labels)
 			acc = util.accuracy(logits, labels)
 			loss = lossfunc(logits, labels)
-			# print(loss.shape)
-			# loss = loss.mean()
 			loss.backward()
 			optim.step()
 
@@ -67,17 +69,11 @@ if __name__=='__main__':
 				t1 =time.time()
 				speed = BSIZE * 10 / (t1-t0)
 				t0 = t1
-				print('Epoch:%03d\tIter:%06d\tLoss:%.4f\tAcc:%.4f\tLR:%.1e\tSpeed:%.2f'%(e,i,loss.cpu().detach().numpy(), acc, lr, speed))
-			if i%2000==0 and i>0:
-				if not os.path.exists('./model/'):
-					os.makedirs('./model/')
-				torch.save(model.module.state_dict(), './model/%04d_%06d.pth.tar'%(e,i))
-				print('Model saved to:', './model/%04d_%06d.pth.tar'%(e,i))
+				print('Epoch:%03d\tIter:%06d/%06d\tLoss:%.4f\tAcc:%.4f\tLR:%.1e\tSpeed:%.2f'%(e,i,reader.iter_per_epoch,loss.cpu().detach().numpy(), acc, lr, speed))
+			if i%2000==0:
+				saver.save('./model/%04d_%06d.pth'%(e,i))
 		if e%3==2:
 			newlr = lr * 0.1 
 			for param_group in optim.param_groups:
 				param_group['lr'] = newlr
-		if not os.path.exists('./model/'):
-			os.makedirs('./model/')
-		torch.save(model.module.state_dict(), './model/%04d_%06d.pth.tar'%(e,i))
-		print('Model saved to:', './model/%04d_%06d.pth.tar'%(e,i))
+		saver.save('./model/%04d_%06d.pth'%(e,i))
