@@ -10,7 +10,7 @@ class MarginalCosineLayer(M.Model):
 	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
 		x = self.classifier(x)
 		if not (m1==1.0 and m2==0.0 and m3==0.0):
-			print('MarginalCosineLayer used.')
+			# print('MarginalCosineLayer used.')
 			idx = torch.arange(0,label.size(0), dtype=torch.long)
 			t = x[idx, label]
 			t = torch.acos(t)
