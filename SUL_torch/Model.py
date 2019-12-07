@@ -20,6 +20,7 @@ PARAM_MFM = 4
 PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 PARAM_SWISH = 7
+PARAM_PRELU = 8
 
 class Saver():
 	def __init__(self, module):
@@ -35,11 +36,17 @@ class Saver():
 			return False
 
 	def restore(self, path):
-		if path[-4]=='.pth':
-			if isinstance(self.model, nn.DataParallel):
+		print('Trying to load from:',path)
+		# print(path[-4:])
+		if path[-4:] == '.pth':
+			if not os.path.exists(path):
+				print('Path:',path, 'does not exsist.')
+			elif isinstance(self.model, nn.DataParallel):
 				self.model.module.load_state_dict(torch.load(path))
+				print('Model loaded from:', path)
 			else:
 				self.model.load_state_dict(torch.load(path))
+				print('Model loaded from:', path)
 		else:
 			path = self._get_checkpoint(path)
 			if path:
@@ -71,11 +78,16 @@ class ConvLayer(Model):
 			self.bn = L.BatchNorm()
 		self.batch_norm = batch_norm
 		self.activation = activation
+		if self.activation == PARAM_PRELU:
+			self.act = torch.nn.PReLU()
 	def forward(self, x):
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
-		x = L.activation(x, self.activation)
+		if self.activation==PARAM_PRELU:
+			x = self.act(x)
+		else:
+			x = L.activation(x, self.activation)
 		return x 
 
 class Dense(Model):
@@ -83,11 +95,16 @@ class Dense(Model):
 		self.fc = L.fclayer(outsize, usebias, norm)
 		self.batch_norm = batch_norm
 		self.activation = activation
+		if self.activation == PARAM_PRELU:
+			self.act = torch.nn.PReLU()
 		if batch_norm:
 			self.bn = L.BatchNorm()
 	def forward(self, x):
 		x = self.fc(x)
 		if self.batch_norm:
 			x = self.bn(x)
-		x = L.activation(x, self.activation)
+		if self.activation==PARAM_PRELU:
+			x = self.act(x)
+		else:
+			x = L.activation(x, self.activation)
 		return x 
