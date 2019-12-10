@@ -72,10 +72,10 @@ class Saver():
 		ckpt.close()
 
 class ConvLayer(Model):
-	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, activation=-1, batch_norm=False, usebias=True, groups=1):
+	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, activation=-1, batch_norm=False, affine=True, usebias=True, groups=1):
 		self.conv = L.conv2D(size, outchn, stride, pad, dilation_rate, usebias, groups)
 		if batch_norm:
-			self.bn = L.BatchNorm()
+			self.bn = L.BatchNorm(affine=affine)
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
@@ -91,14 +91,14 @@ class ConvLayer(Model):
 		return x 
 
 class Dense(Model):
-	def initialize(self, outsize, batch_norm=False, activation=-1 , usebias=True, norm=False):
+	def initialize(self, outsize, batch_norm=False, affine=True, activation=-1 , usebias=True, norm=False):
 		self.fc = L.fclayer(outsize, usebias, norm)
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
 			self.act = torch.nn.PReLU()
 		if batch_norm:
-			self.bn = L.BatchNorm()
+			self.bn = L.BatchNorm(affine=affine)
 	def forward(self, x):
 		x = self.fc(x)
 		if self.batch_norm:
