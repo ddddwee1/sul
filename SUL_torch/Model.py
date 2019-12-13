@@ -56,7 +56,7 @@ class Saver():
 					self.model.load_state_dict(torch.load(path))
 				print('Model loaded from:', path)
 			else:
-				print('No checkpoint found. No restoration is performed.')
+				print('No checkpoint found. No restoration will be performed.')
 
 	def save(self, path):
 		directory = os.path.dirname(path)
@@ -79,7 +79,7 @@ class ConvLayer(Model):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
-			self.act = torch.nn.PReLU()
+			self.act = torch.nn.PReLU(num_parameters=outchn)
 	def forward(self, x):
 		x = self.conv(x)
 		if self.batch_norm:
@@ -96,7 +96,7 @@ class Dense(Model):
 		self.batch_norm = batch_norm
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
-			self.act = torch.nn.PReLU()
+			self.act = torch.nn.PReLU(num_parameters=outchn)
 		if batch_norm:
 			self.bn = L.BatchNorm(affine=affine)
 	def forward(self, x):

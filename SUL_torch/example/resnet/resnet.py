@@ -8,13 +8,13 @@ class ResBlock_v1(M.Model):
 	def initialize(self, outchn, stride, bottle_neck=False):
 		self.stride = stride
 		self.outchn = outchn
-		# self.bn1 = M.BatchNorm()
-		self.c1 = M.ConvLayer(3, outchn, activation=M.PARAM_LRELU, usebias=False, batch_norm=True)
+		self.bn1 = M.BatchNorm()
+		self.c1 = M.ConvLayer(3, outchn, activation=M.PARAM_PRELU, usebias=False, batch_norm=True)
 		self.c2 = M.ConvLayer(3, outchn, stride=stride, usebias=False, batch_norm=True)
 
 		# se module 
-		self.c3 = M.ConvLayer(1, outchn//16, activation=M.PARAM_LRELU)
-		self.c4 = M.ConvLayer(1, outchn, activation=M.PARAM_SIGMOID)
+		#self.c3 = M.ConvLayer(1, outchn//16, activation=M.PARAM_PRELU)
+		#self.c4 = M.ConvLayer(1, outchn, activation=M.PARAM_SIGMOID)
 
 		# shortcut 
 		self.sc = M.ConvLayer(1, outchn, stride=stride, usebias=False, batch_norm=True)
@@ -23,15 +23,15 @@ class ResBlock_v1(M.Model):
 		self.inchn = inputs[0].shape[1]
 
 	def forward(self, x):
-		# res = self.bn1(x)
-		res = self.c1(x)
+		res = self.bn1(x)
+		res = self.c1(res)
 		res = self.c2(res)
 		# print(res.shape)
 		# se
-		se = M.GlobalAvgPool(res)
-		se = self.c3(se)
-		se = self.c4(se)
-		res = res * se 
+		#se = M.GlobalAvgPool(res)
+		#se = self.c3(se)
+		#se = self.c4(se)
+		#res = res * se 
 		# shortcut 
 		if self.inchn==self.outchn and self.stride==1:
 			sc = x 
@@ -42,7 +42,7 @@ class ResBlock_v1(M.Model):
 
 class HeadBlock(M.Model):
 	def initialize(self, outchn, stride=1):
-		self.c1 = M.ConvLayer(3, outchn, stride, usebias=False, activation=M.PARAM_LRELU, batch_norm=True)
+		self.c1 = M.ConvLayer(3, outchn, stride, usebias=False, activation=M.PARAM_PRELU, batch_norm=True)
 
 	def forward(self, x):
 		x = self.c1(x)
@@ -57,7 +57,7 @@ class ResNet(M.Model):
 				self.body.append(ResBlock_v1(chn, 2 if i==0 else 1))
 
 		self.emb_bn = M.BatchNorm()
-		self.embedding = M.Dense(embedding_size, batch_norm=embedding_bn, usebias=False)
+		self.embedding = M.Dense(embedding_size, batch_norm=embedding_bn, affine=False)
 
 	def forward(self, x):
 		x = self.head(x)

@@ -15,7 +15,7 @@ def adjust_img(img):
 def process(sample):
 	# add more process here
 	img, label, max_label = sample
-	img = img.replace('./','../dataset/')
+	img = img.replace('./','../datasetemoreasia/')
 	img = cv2.imread(img)
 	img = adjust_img(img)
 	return img, label, max_label
