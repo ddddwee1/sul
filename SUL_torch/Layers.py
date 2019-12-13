@@ -143,7 +143,7 @@ class BatchNorm(Model):
 	# 				 'running_mean', 'running_var', 'num_batches_tracked',
 	# 				 'num_features', 'affine', 'weight', 'bias']
 
-	def initialize(self, eps=1e-5, momentum=0.1, affine=True,
+	def initialize(self, eps=2e-5, momentum=0.1, affine=True,
 				 track_running_stats=True):
 		self.eps = eps
 		self.momentum = momentum
