@@ -21,6 +21,7 @@ PARAM_MFM_FC = 5
 PARAM_SIGMOID = 6
 PARAM_SWISH = 7
 PARAM_PRELU = 8
+PARAM_PRELU1 = 9
 
 class Saver():
 	def __init__(self, module):
@@ -80,11 +81,13 @@ class ConvLayer(Model):
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
 			self.act = torch.nn.PReLU(num_parameters=outchn)
+		elif self.activation==PARAM_PRELU1:
+			self.act = torch.nn.PReLU(num_parameters=1)
 	def forward(self, x):
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
-		if self.activation==PARAM_PRELU:
+		if self.activation==PARAM_PRELU or self.activation==PARAM_PRELU1:
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
@@ -97,13 +100,15 @@ class Dense(Model):
 		self.activation = activation
 		if self.activation == PARAM_PRELU:
 			self.act = torch.nn.PReLU(num_parameters=outchn)
+		elif self.activation==PARAM_PRELU1:
+			self.act = torch.nn.PReLU(num_parameters=1)
 		if batch_norm:
 			self.bn = L.BatchNorm(affine=affine)
 	def forward(self, x):
 		x = self.fc(x)
 		if self.batch_norm:
 			x = self.bn(x)
-		if self.activation==PARAM_PRELU:
+		if self.activation==PARAM_PRELU or self.activation==PARAM_PRELU1:
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
