@@ -99,6 +99,48 @@ class conv2D(Model):
 	def forward(self, x):
 		return F.conv2d(x, self.weight, self.bias, self.stride, self.pad, self.dilation_rate, self.gropus)
 
+class conv1D(Model):
+	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, usebias=True, gropus=1):
+		self.size = size
+		self.outchn = outchn
+		self.stride = stride
+		self.usebias = usebias
+		self.gropus = gropus
+		self.dilation_rate = dilation_rate
+		assert (pad in ['VALID','SAME_LEFT'])
+		self.pad = pad 
+
+	def _parse_args(self, input_shape):
+		inchannel = input_shape[1]
+		# parse args
+		if self.pad == 'VALID':
+			self.pad = 0
+		else:
+			self.pad = self.size//2
+		self.size = [self.outchn, inchannel // self.gropus, self.size]
+
+	def build(self, *inputs):
+		# print('building...')
+		inp = inputs[0]
+		self._parse_args(inp.shape)
+		self.weight = Parameter(torch.Tensor(*self.size))
+		if self.usebias:
+			self.bias = Parameter(torch.Tensor(self.outchn))
+		else:
+			self.register_parameter('bias', None)
+		self.reset_params()
+
+	def reset_params(self):
+		init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+		if self.bias is not None:
+			fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+			bound = 1 / math.sqrt(fan_in)
+			init.uniform_(self.bias, -bound, bound)
+
+	def forward(self, x):
+		return F.conv1d(x, self.weight, self.bias, self.stride, self.pad, self.dilation_rate, self.gropus)
+
+
 class fclayer(Model):
 	def initialize(self, outsize, usebias=True, norm=False):
 		self.outsize = outsize
