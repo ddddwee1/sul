@@ -91,6 +91,16 @@ class ConvLayer(Model):
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
+		if hasattr(self, 'record'):
+			if self.record:
+				# do record
+				res = {}
+				for p in self.named_parameters():
+					res[p[0]] = p[1]
+				for p in self.named_buffers():
+					res[p[0]] = p[1]
+				L.record_params.append(res)
+			self.record = False
 		return x 
 
 class ConvLayer1D(Model):

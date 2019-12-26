@@ -5,6 +5,8 @@ import torch.nn.init as init
 from torch.nn.parameter import Parameter
 import math 
 
+record_params = []
+
 class Model(nn.Module):
 	def __init__(self, *args, **kwargs):
 		super(Model, self).__init__()
@@ -49,6 +51,11 @@ class Model(nn.Module):
 					grad_fn.register_hook(wrapper)
 		self.is_built = True
 		return result
+
+	def record(self):
+		def set_record_flag(obj):
+			obj.record = True
+		self.apply(set_record_flag)
 
 class conv2D(Model):
 	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, usebias=True, gropus=1):
@@ -185,7 +192,7 @@ class BatchNorm(Model):
 	# 				 'running_mean', 'running_var', 'num_batches_tracked',
 	# 				 'num_features', 'affine', 'weight', 'bias']
 
-	def initialize(self, eps=2e-5, momentum=0.1, affine=True,
+	def initialize(self, eps=1e-5, momentum=0.1, affine=True,
 				 track_running_stats=True):
 		self.eps = eps
 		self.momentum = momentum
