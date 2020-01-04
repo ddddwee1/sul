@@ -283,3 +283,59 @@ def activation(x, act, **kwargs):
 		return F.tanh(x)
 	elif act==6:
 		return torch.sigmoid(x)
+
+class graphConvLayer(Model):
+	def __init__(self, outsize, adj_mtx=None, adj_fn=None, values=None, usebias=True):
+		assert (adj_mtx is None) ^ (adj_fn is None), 'Assign either adj_mtx or adj_fn' 
+		self.outsize = outsize
+		self.adj_mtx = adj_mtx
+		self.adj_fn = adj_fn
+		self.values = values
+		self.usebias = usebias
+		self.normalized = False
+
+	def _parse_args(self, input_shape):
+		# set size
+		insize = input_shape[-1]
+		self.size = [self.outsize, insize]
+
+	def build(self, *inputs):
+		inp = inputs[0]
+		self._parse_args(inp.shape)
+		self.weight = Parameter(torch.Tensor(*self.size))
+		if self.usebias:
+			self.bias = Parameter(torch.Tensor(self.outsize))
+		else:
+			self.register_parameter('bias', None)
+		self.reset_params()
+
+	def reset_params(self):
+		init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+		if self.bias is not None:
+			fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+			bound = 1 / math.sqrt(fan_in)
+			init.uniform_(self.bias, -bound, bound)
+
+	def _normalize_adj_mtx(self, mtx):
+		with torch.no_grad():
+			S = torch.sum(mtx, dim=1)
+			S = torch.sqrt(S)
+			S = 1. / S
+			S = torch.diag(S)
+			I = torch.eye(S.shape[0])
+			A_ = (mtx + I) 
+			A_ = torch.mm(S, A_)
+			A_ = torch.mm(A_, S)
+		return A_
+
+	def forward(self, x):
+		if self.adj_mtx is not None:
+			if not self.normalized:
+				self.adj_mtx = self._normalize_adj_mtx(self.adj_mtx)
+				self.normalized = True
+		else:
+			A = self.adj_fn(x)
+		res = torch.mm(A, x)
+		res = F.linear(res, self.weight, self.bias)
+		return res 
+		

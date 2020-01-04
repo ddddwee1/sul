@@ -144,3 +144,84 @@ class Dense(Model):
 		else:
 			x = L.activation(x, self.activation)
 		return x 
+
+class LSTMCell(Model):
+	def initialize(self, outdim):
+		self.F = L.fcLayer(outdim, usebias=False, norm=False)
+		self.O = L.fcLayer(outdim, usebias=False, norm=False)
+		self.I = L.fcLayer(outdim, usebias=False, norm=False)
+		self.C = L.fcLayer(outdim, usebias=False, norm=False)
+
+		self.hF = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hO = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hI = L.fcLayer(outdim, usebias=False, norm=False)
+		self.hC = L.fcLayer(outdim, usebias=False, norm=False)
+
+	def forward(self, x, h, c_prev):
+		f = self.F(x) + self.hF(h)
+		o = self.O(x) + self.hO(h)
+		i = self.I(x) + self.hI(h)
+		c = self.C(x) + self.hC(h)
+
+		f_ = torch.sigmoid(f)
+		c_ = torch.tanh(c) * torch.sigmoid(i)
+		o_ = torch.sigmoid(o)
+
+		next_c = c_prev * f_ + c_ 
+		next_h = o_ * torch.tanh(next_c)
+		return next_h, next_c
+
+class ConvLSTM(Model):
+	def initialize(self, chn):
+		self.gx = L.conv2D(3, chn)
+		self.gh = L.conv2D(3, chn)
+		self.fx = L.conv2D(3, chn)
+		self.fh = L.conv2D(3, chn)
+		self.ox = L.conv2D(3, chn)
+		self.oh = L.conv2D(3, chn)
+		self.gx = L.conv2D(3, chn)
+		self.gh = L.conv2D(3, chn)
+
+	def forward(self, x, c, h):
+		gx = self.gx(x)
+		gh = self.gh(h)
+
+		ox = self.ox(x)
+		oh = self.oh(h)
+
+		fx = self.fx(x)
+		fh = self.fh(h)
+
+		gx = self.gx(x)
+		gh = self.gh(h)
+
+		g = torch.tanh(gx + gh)
+		o = torch.sigmoid(ox + oh)
+		i = torch.sigmoid(ix + ih)
+		f = torch.sigmoid(fx + fh)
+
+		cell = f*c + i*g 
+		h = o * torch.tanh(cell)
+		return cell, h 
+
+class GraphConvLayer(Model):
+	def initialize(self, outsize, adj_mtx=None, adj_fn=None, usebias=True, activation=-1, batch_norm=False):
+		self.GCL = L.graphConvLayer(outsize, adj_mtx=adj_mtx, adj_fn=adj_fn, usebias=usebias)
+		self.batch_norm = batch_norm
+		self.activation = activation
+		if batch_norm:
+			self.bn = L.batch_norm()
+		if self.activation == PARAM_PRELU:
+			self.act = torch.nn.PReLU(num_parameters=outchn)
+		elif self.activation==PARAM_PRELU1:
+			self.act = torch.nn.PReLU(num_parameters=1)
+
+	def forward(self, x):
+		x = self.GCL(x)
+		if self.batch_norm:
+			x = self.bn(x)
+		if self.activation==PARAM_PRELU or self.activation==PARAM_PRELU1:
+			x = self.act(x)
+		else:
+			x = L.activation(x, self.activation)
+		return x 
