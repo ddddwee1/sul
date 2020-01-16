@@ -18,6 +18,7 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 	feat = feat / feat.norm(p=2, dim=1, keepdim=True)
 	weight = weight / weight.norm(p=2, dim=1, keepdim=True)
 	# x = F.linear(feat, weight, None)
+	print(feat.device, weight.device)
 	x = torch.mm(feat, weight.t())
 	bsize = feat.shape[0]
 	if not (m1==1.0 and m2==0.0 and m3==0.0):
@@ -193,7 +194,7 @@ class DistributedClassifier(M.Model):
 		else:
 			weight_idx = self.weight_idx+[self.num_classes]
 			for i in range(len(self.gpus)):
-				self.weights[i].data = w[weight_idx[i]: weight_idx[i+1]]
+				self.weights[i].data[:] = w[weight_idx[i]: weight_idx[i+1]]
 
 	def _save_to_state_dict(self, destination, prefix, keep_vars):
 		# TO-DO: SAVE FUNCTIONS
