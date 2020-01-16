@@ -17,7 +17,8 @@ def accuracy(pred, label):
 def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=False):
 	feat = feat / feat.norm(p=2, dim=1, keepdim=True)
 	weight = weight / weight.norm(p=2, dim=1, keepdim=True)
-	x = F.linear(feat, weight, None)
+	# x = F.linear(feat, weight, None)
+	x = torch.mm(feat, weight.t())
 	bsize = feat.shape[0]
 	if not (m1==1.0 and m2==0.0 and m3==0.0):
 		idlen = weight.shape[0]
@@ -28,7 +29,7 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 			xexp = torch.exp(x)
 			xsum = xexp.sum(dim=1, keepdim=True)
 			xmax, xargmax = torch.max(xexp, dim=1)
-			return xexp, xsum, xargmax, xmax
+			return x, xsum, xargmax, xmax
 		label = label[(label>=0) & (label<idlen)]
 
 		t = x[idx, label]
@@ -37,6 +38,10 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 			t = t * m1 
 		if m2!=0.0:
 			t = t + m2 
+		# with torch.no_grad():
+		# 	delta = t - (np.pi * 2 - 1e-6) 
+		# 	delta.clamp_(min=0)
+		# t = t - delta
 		t = torch.cos(t)
 		x[idx, label] = t - m3 
 
@@ -47,24 +52,32 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 		xexp = torch.exp(x)
 		xsum = xexp.sum(dim=1, keepdim=True)
 		xmax, xargmax = torch.max(xexp, dim=1)
-		return xexp, xsum, xargmax, xmax
+		return x, xsum, xargmax, xmax
+
 
 # change backward in autograd
 class NLLDistributed(torch.autograd.Function):
 	@staticmethod
-	def forward(ctx, xexp, label, sums):
+	def forward(ctx, x, label, sums):
+		xexp = torch.exp(x)
 		results = xexp / sums 
 		idx = torch.where(label>=0)[0]
-		grad = results.clone()
+		grad = results.clone().detach()
 		if idx.shape[0]!=0:
 			label = label[idx]
 			grad[idx,label] -= 1. 
+			grad = grad / xexp.shape[0]
+			results = results[idx, label]
+		else:
+			results = (results[0,0] + 1) / (results[0,0] + 1) # avoid nan
 		ctx.save_for_backward(grad)
+		results = - torch.log(results)
 		return results
 
+	@staticmethod
 	def backward(ctx, grad_out):
 		grad = ctx.saved_tensors
-		return grad, None, None
+		return grad[0], None, None
 		
 nllDistributed = NLLDistributed.apply
 
@@ -74,13 +87,12 @@ class DistributedClassifier(M.Model):
 		# otherwise, distribute the classifier into gpus independently
 		self.num_classes = num_classes
 		self.gpus = gpus
-		assert (self.gpus is None) or isinstance(self.gpus, list), 'gpus must be either None or python list'
+		assert (self.gpus is None) or isinstance(self.gpus, list) or isinstance(self.gpus, tuple), 'gpus must be either None or python list'
 
-	def parse_args(self, inpshape):
+	def parse_args(self, input_shape):
 		if self.gpus is None:
 			self.weight_shape = [self.num_classes, input_shape[1]]
 		else:
-			# TO-DO : self.weight_shape, self.weight_idx
 			id_per_split = self.num_classes // len(self.gpus) + int(self.num_classes % len(self.gpus) > 0)
 			self.weight_shape = []
 			self.weight_idx = [0]
@@ -91,7 +103,6 @@ class DistributedClassifier(M.Model):
 				outnum = self.weight_idx[i+1] - self.weight_idx[i]
 				shape = [outnum, input_shape[1]]
 				self.weight_shape.append(shape)
-			self.weight_idx = self.weight_idx[:-1]
 
 	def build(self, *inputs):
 		input_shape = inputs[0].shape 
@@ -103,9 +114,9 @@ class DistributedClassifier(M.Model):
 		else:
 			self.weights = []
 			for idx, i in enumerate(self.gpus):
-				weight = Parameter(torch.ones(*self.self.weight_shape[idx]))
+				weight = Parameter(torch.ones(*self.weight_shape[idx], device=torch.device('cuda:%d'%i)))
+				self.register_parameter('w%d'%idx,weight)
 				init.normal_(weight, std=0.01)
-				weight.to(i)
 				self.weights.append(weight)
 
 	def forward(self, x, label, **kwargs):
@@ -113,19 +124,20 @@ class DistributedClassifier(M.Model):
 			# cpu mode, normal fc layer
 			x = classify(x, self.weight, label, simple_output=True, **kwargs)
 			with torch.no_grad():
-				acc = accuracy(logits, labels)
-			x = F.LogSoftmax(x, dim=1)
+				acc = accuracy(x, label)
+			x = F.log_softmax(x, dim=1)
 			label = label.unsqueeze(-1)
 			loss = torch.gather(x, 1, label)
+			# print(loss)
 			loss = -loss.mean()
-			return loss, acc 
+			return loss, acc
 		else:
 			weight_scattered = self.weights 
 			feat_copies = [x.to(i) for i in self.gpus]
 			labels_scattered = []
 			for i in range(len(self.weights)):
 				labels_new = label.clone()
-				labels_new[(labels_new>=self.outs[i+1]) | (labels_new<self.outs[i])] = -1
+				labels_new[(labels_new>=self.weight_idx[i+1]) | (labels_new<self.weight_idx[i])] = -1
 				labels_new = labels_new - self.weight_idx[i]
 				labels_scattered.append(labels_new)
 			kwargs_scattered = scatter(kwargs, self.gpus)
@@ -138,20 +150,30 @@ class DistributedClassifier(M.Model):
 			argmaxs = [i[2] for i in results_scattered]
 			maxs = [i[3] for i in results_scattered]
 
-			sums = gather(sums, 0, dim=1)[0]
+			sums = gather(sums, 0, dim=1)
 			sums = sums.sum(dim=1, keepdim=True)
 			sums_scattered = [sums.to(i) for i in self.gpus]
 			loss_input_scattered = list(zip(logits, labels_scattered, sums_scattered))
-			loss_results_scattered = parallel_apply(nllDistributed, loss_input_scattered, None, self.gpus)
-			loss_results_scattered = [i.cpu() for i in loss_results_scattered]
-			loss = sum(loss_results_scattered) / len(loss_results_scattered)
+			loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
+			# for i in loss_results_scattered:
+			# 	print('ls',i)
+			loss_results_scattered = [i.sum() for i in loss_results_scattered]
+			
+			loss_results_scattered = [i.to(0) for i in loss_results_scattered]
+			loss = sum(loss_results_scattered)
+			loss = loss / x.shape[0]
 
 			for i in range(len(argmaxs)):
 				argmaxs[i] = argmaxs[i] + self.weight_idx[i]
-			maxs = gather(sums, 0, dim=1)[0]
+			# print(maxs)
+			maxs = [i.to(0) for i in maxs]
+			maxs = torch.stack(maxs, dim=1)
+			
 			_, max_split = torch.max(maxs, dim=1)
 			idx = torch.arange(0,maxs.size(0), dtype=torch.long)
-			predicted = maxs[idx, max_split]
+			argmaxs = [i.to(0) for i in argmaxs]
+			argmaxs = torch.stack(argmaxs, dim=1)
+			predicted = argmaxs[idx, max_split]
 
 			total = label.size(0)
 			predicted = predicted.cpu()
@@ -159,7 +181,7 @@ class DistributedClassifier(M.Model):
 			correct = (predicted == label).sum().item()
 			acc = correct / total 
 
-			return loss, acc 
+			return loss, acc
 
 
 	def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
