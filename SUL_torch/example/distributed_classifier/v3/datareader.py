@@ -57,16 +57,3 @@ def get_datareader(txtfile, bsize, processes):
 	reader.set_post_process_fn(post_process)
 	reader.prefetch()
 	return reader
-
-if __name__=='__main__':
-	import time 
-	data_reader = get_datareader('imglist_iccv_small.txt', 1024)
-	for i in range(10):
-		t1 = time.time()
-		batch = data_reader.get_next()
-		batch = batch[0]
-		print(len(batch))
-		print(batch[0].shape)
-		print(batch[1].shape)
-		t2 = time.time()
-		print(t2-t1)

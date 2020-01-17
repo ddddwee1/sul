@@ -30,50 +30,36 @@ if __name__=='__main__':
 	if devices is not None: BackboneRes50 = nn.DataParallel(BackboneRes50, device_ids=devices).cuda()
 	saver = M.Saver(BackboneRes50)
 	saver_classifier = M.Saver(classifier)
-	# saver.restore('./model/')
-	# saver_classifier.restore('./classifier/')
+	saver.restore('./model/')
+	saver_classifier.restore('./classifier/')
 
 	# define optim 
-	optim = torch.optim.SGD([{'params':BackboneRes50.parameters()}, {'params':classifier.parameters()}], lr=0.1, momentum=0.9, weight_decay=0.0005)
+	optim = torch.optim.SGD([{'params':BackboneRes50.parameters()}, {'params':classifier.parameters()}], lr=0.01, momentum=0.9, weight_decay=0.0005)
 	classifier.train()
 	BackboneRes50.train()
 
 	MAXEPOCH = 10
 
-	
-
 	for ep in range(MAXEPOCH):
 		bar = tqdm(range(reader.iter_per_epoch))
 		for it in bar:
-			t0 = time.time()
 			imgs, labels = reader.get_next()
-			t01 = time.time()
 			imgs = torch.from_numpy(imgs)
 			labels = torch.from_numpy(labels)
-			t02 = time.time()
+
 			# training loop 
 			optim.zero_grad()
-			t1 = time.time()
 			feats = BackboneRes50(imgs)
-			t2 = time.time()
 			loss, acc = classifier(feats, labels)
-			t3 = time.time()
 			loss.backward()
-			t4 = time.time()
-			# print(list(BackboneRes50.parameters())[0])
 			optim.step()
-			# print(list(BackboneRes50.parameters())[0])
-			# input()
-			t41 = time.time()
+
 			# output string 
 			lr = optim.param_groups[0]['lr']
 			loss = loss.cpu().detach().numpy()
 			# acc = acc.cpu().detach().numpy()
-
 			outstr = 'Ep:%d Ls:%.3f Ac:%.3f Lr:%.1e'%(ep, loss, acc, lr)
 			bar.set_description(outstr)
-			t5 = time.time()
-			# print(t01-t0, t02-t01, t1-t02,t2-t1, t3-t2, t4-t3, t41-t4, t5-t41, t5-t0)
 
 			# save model 
 			if it%2000==0 and it>0:

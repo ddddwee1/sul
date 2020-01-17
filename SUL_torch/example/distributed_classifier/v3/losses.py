@@ -17,8 +17,6 @@ def accuracy(pred, label):
 def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=False):
 	feat = feat / feat.norm(p=2, dim=1, keepdim=True)
 	weight = weight / weight.norm(p=2, dim=1, keepdim=True)
-	# x = F.linear(feat, weight, None)
-	print(feat.device, weight.device)
 	x = torch.mm(feat, weight.t())
 	bsize = feat.shape[0]
 	if not (m1==1.0 and m2==0.0 and m3==0.0):
@@ -54,7 +52,6 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 		xsum = xexp.sum(dim=1, keepdim=True)
 		xmax, xargmax = torch.max(xexp, dim=1)
 		return x, xsum, xargmax, xmax
-
 
 # change backward in autograd
 class NLLDistributed(torch.autograd.Function):
@@ -129,7 +126,6 @@ class DistributedClassifier(M.Model):
 			x = F.log_softmax(x, dim=1)
 			label = label.unsqueeze(-1)
 			loss = torch.gather(x, 1, label)
-			# print(loss)
 			loss = -loss.mean()
 			return loss, acc
 		else:
@@ -156,8 +152,6 @@ class DistributedClassifier(M.Model):
 			sums_scattered = [sums.to(i) for i in self.gpus]
 			loss_input_scattered = list(zip(logits, labels_scattered, sums_scattered))
 			loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
-			# for i in loss_results_scattered:
-			# 	print('ls',i)
 			loss_results_scattered = [i.sum() for i in loss_results_scattered]
 			
 			loss_results_scattered = [i.to(0) for i in loss_results_scattered]
@@ -166,7 +160,6 @@ class DistributedClassifier(M.Model):
 
 			for i in range(len(argmaxs)):
 				argmaxs[i] = argmaxs[i] + self.weight_idx[i]
-			# print(maxs)
 			maxs = [i.to(0) for i in maxs]
 			maxs = torch.stack(maxs, dim=1)
 			
@@ -184,7 +177,6 @@ class DistributedClassifier(M.Model):
 
 			return loss, acc
 
-
 	def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
 		for hook in self._load_state_dict_pre_hooks.values():
 			hook(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
@@ -197,7 +189,6 @@ class DistributedClassifier(M.Model):
 				self.weights[i].data[:] = w[weight_idx[i]: weight_idx[i+1]]
 
 	def _save_to_state_dict(self, destination, prefix, keep_vars):
-		# TO-DO: SAVE FUNCTIONS
 		if self.gpus is None:
 			buf = self.weight.data
 		else:
