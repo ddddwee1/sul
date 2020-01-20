@@ -60,7 +60,7 @@ class ResNet(M.Model):
 		self.stage3 = Stage(channel_list[3], blocknum_list[2])
 		self.stage4 = Stage(channel_list[4], blocknum_list[3])
 		self.bn1 = M.BatchNorm()
-		self.fc1 = M.Dense(512, usebias=False, batch_norm=False)
+		self.fc1 = M.Dense(512, usebias=False, batch_norm=True)
 
 	def forward(self, x):
 		x = self.c1(x)
@@ -70,6 +70,7 @@ class ResNet(M.Model):
 		x = self.stage4(x)
 		x = self.bn1(x)
 		x = M.flatten(x)
+		x = F.dropout(x, 0.4, self.training, False)
 		x = self.fc1(x)
 		return x 
 
