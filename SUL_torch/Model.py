@@ -36,25 +36,25 @@ class Saver():
 		else:
 			return False
 
-	def restore(self, path):
+	def restore(self, path, strict=True):
 		print('Trying to load from:',path)
 		# print(path[-4:])
 		if path[-4:] == '.pth':
 			if not os.path.exists(path):
 				print('Path:',path, 'does not exsist.')
 			elif isinstance(self.model, nn.DataParallel):
-				self.model.module.load_state_dict(torch.load(path))
+				self.model.module.load_state_dict(torch.load(path), strict=strict)
 				print('Model loaded from:', path)
 			else:
-				self.model.load_state_dict(torch.load(path))
+				self.model.load_state_dict(torch.load(path), strict=strict)
 				print('Model loaded from:', path)
 		else:
 			path = self._get_checkpoint(path)
 			if path:
 				if isinstance(self.model, nn.DataParallel):
-					self.model.module.load_state_dict(torch.load(path))
+					self.model.module.load_state_dict(torch.load(path), strict=strict)
 				else:
-					self.model.load_state_dict(torch.load(path))
+					self.model.load_state_dict(torch.load(path), strict=strict)
 				print('Model loaded from:', path)
 			else:
 				print('No checkpoint found. No restoration will be performed.')
@@ -106,27 +106,6 @@ class ConvLayer(Model):
 class ConvLayer1D(Model):
 	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, activation=-1, batch_norm=False, affine=True, usebias=True, groups=1):
 		self.conv = L.conv1D(size, outchn, stride, pad, dilation_rate, usebias, groups)
-		if batch_norm:
-			self.bn = L.BatchNorm(affine=affine)
-		self.batch_norm = batch_norm
-		self.activation = activation
-		if self.activation == PARAM_PRELU:
-			self.act = torch.nn.PReLU(num_parameters=outchn)
-		elif self.activation==PARAM_PRELU1:
-			self.act = torch.nn.PReLU(num_parameters=1)
-	def forward(self, x):
-		x = self.conv(x)
-		if self.batch_norm:
-			x = self.bn(x)
-		if self.activation==PARAM_PRELU or self.activation==PARAM_PRELU1:
-			x = self.act(x)
-		else:
-			x = L.activation(x, self.activation)
-		return x 
-
-class ConvLayer3D(Model):
-	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, activation=-1, batch_norm=False, affine=True, usebias=True, groups=1):
-		self.conv = L.conv3D(size, outchn, stride, pad, dilation_rate, usebias, groups)
 		if batch_norm:
 			self.bn = L.BatchNorm(affine=affine)
 		self.batch_norm = batch_norm
