@@ -12,6 +12,12 @@ Now updated to SUL3.0 for tf2
 
 Examples in './example/'
 
+## Pytorch version
+
+Now I move to Pytorch.
+
+Codes in sul_torch
+
 ## Documentation
 
 [The documentation can be viewed here.](https://sul.readthedocs.io/en/latest/)
