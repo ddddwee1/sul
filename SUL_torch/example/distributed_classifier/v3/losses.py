@@ -28,7 +28,7 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 			xexp = torch.exp(x)
 			xsum = xexp.sum(dim=1, keepdim=True)
 			xmax, xargmax = torch.max(xexp, dim=1)
-			return x, xsum, xargmax, xmax
+			return x, xexp, xsum, xargmax, xmax
 		label = label[(label>=0) & (label<idlen)]
 
 		t = x[idx, label]
@@ -51,13 +51,13 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 		xexp = torch.exp(x)
 		xsum = xexp.sum(dim=1, keepdim=True)
 		xmax, xargmax = torch.max(xexp, dim=1)
-		return x, xsum, xargmax, xmax
+		return x, xexp, xsum, xargmax, xmax
 
 # change backward in autograd
 class NLLDistributed(torch.autograd.Function):
 	@staticmethod
-	def forward(ctx, x, label, sums):
-		xexp = torch.exp(x)
+	def forward(ctx, x, xexp, label, sums):
+		# xexp = torch.exp(x)
 		results = xexp / sums 
 		idx = torch.where(label>=0)[0]
 		grad = results.clone().detach()
@@ -75,9 +75,47 @@ class NLLDistributed(torch.autograd.Function):
 	@staticmethod
 	def backward(ctx, grad_out):
 		grad = ctx.saved_tensors
-		return grad[0], None, None
+		return grad[0], None, None, None
 		
 nllDistributed = NLLDistributed.apply
+
+# change backward in autograd
+class NLLDistributedFull(torch.autograd.Function):
+	@staticmethod
+	def forward(ctx, *args):
+		# xexp = torch.exp(x)
+		splits = len(args) // 4 
+		grads = []
+		loss = 0
+		for i in range(splits):
+			x = args[i*4]
+			xexp = args[i*4+1]
+			label = args[i*4+2]
+			sums = args[i*4+3]
+			results = xexp / sums 
+			idx = torch.where(label>=0)[0]
+			grad = results.clone().detach()
+			if idx.shape[0]!=0:
+				label = label[idx]
+				grad[idx,label] -= 1. 
+				grad = grad / xexp.shape[0]
+				results = results[idx, label]
+			else:
+				results = (results[0,0] + 1) / (results[0,0] + 1) # avoid nan
+			grads.append(grad)
+			grads += [None, None, None]
+			results = - torch.log(results)
+			loss = loss + results.sum().cpu()
+		ctx.save_for_backward(*grads)
+		loss = loss / x.shape[0]
+		return loss 
+
+	@staticmethod
+	def backward(ctx, grad_out):
+		grads = ctx.saved_tensors
+		return grads
+
+nllDistributedFull = NLLDistributedFull.apply
 
 class DistributedClassifier(M.Model):
 	def initialize(self, num_classes, gpus):
@@ -143,20 +181,24 @@ class DistributedClassifier(M.Model):
 			results_scattered = parallel_apply(modules, input_scattered, kwargs_scattered, self.gpus)
 
 			logits = [i[0] for i in results_scattered]
-			sums = [i[1] for i in results_scattered]
-			argmaxs = [i[2] for i in results_scattered]
-			maxs = [i[3] for i in results_scattered]
+			xexps = [i[1] for i in results_scattered]
+			sums = [i[2] for i in results_scattered]
+			argmaxs = [i[3] for i in results_scattered]
+			maxs = [i[4] for i in results_scattered]
 
 			sums = gather(sums, 0, dim=1)
 			sums = sums.sum(dim=1, keepdim=True)
 			sums_scattered = [sums.to(i) for i in self.gpus]
-			loss_input_scattered = list(zip(logits, labels_scattered, sums_scattered))
-			loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
-			loss_results_scattered = [i.sum() for i in loss_results_scattered]
+			loss_input_scattered = list(zip(logits, xexps, labels_scattered, sums_scattered))
+			loss_input_scattered = [list(i) for i in loss_input_scattered]
+			# loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
+			# loss_results_scattered = [i.sum() for i in loss_results_scattered]
 			
-			loss_results_scattered = [i.to(0) for i in loss_results_scattered]
-			loss = sum(loss_results_scattered)
-			loss = loss / x.shape[0]
+			# loss_results_scattered = [i.to(0) for i in loss_results_scattered]
+			# loss = sum(loss_results_scattered)
+			# loss = loss / x.shape[0]
+			loss_input = sum(loss_input_scattered, [])
+			loss = nllDistributedFull(*loss_input)
 
 			for i in range(len(argmaxs)):
 				argmaxs[i] = argmaxs[i] + self.weight_idx[i]
