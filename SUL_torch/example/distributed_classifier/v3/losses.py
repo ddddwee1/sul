@@ -4,7 +4,7 @@ import torch.nn.init as init
 import torch.nn.functional as F 
 import Model as M 
 from torch.nn.parameter import Parameter
-# from torch.nn.parallel import  scatter
+from torch.nn.parallel import replicate, scatter, parallel_apply, gather
 import numpy as np 
 
 def accuracy(pred, label):
@@ -79,44 +79,6 @@ class NLLDistributed(torch.autograd.Function):
 		
 nllDistributed = NLLDistributed.apply
 
-# change backward in autograd
-class NLLDistributedFull(torch.autograd.Function):
-	@staticmethod
-	def forward(ctx, *args):
-		# xexp = torch.exp(x)
-		splits = len(args) // 4 
-		grads = []
-		loss = 0
-		for i in range(splits):
-			x = args[i*4]
-			xexp = args[i*4+1]
-			label = args[i*4+2]
-			sums = args[i*4+3]
-			results = xexp / sums 
-			idx = torch.where(label>=0)[0]
-			grad = results.clone().detach()
-			if idx.shape[0]!=0:
-				label = label[idx]
-				grad[idx,label] -= 1. 
-				grad = grad / xexp.shape[0]
-				results = results[idx, label]
-			else:
-				results = (results[0,0] + 1) / (results[0,0] + 1) # avoid nan
-			grads.append(grad)
-			grads += [None, None, None]
-			results = - torch.log(results)
-			loss = loss + results.sum().cpu()
-		ctx.save_for_backward(*grads)
-		loss = loss / x.shape[0]
-		return loss 
-
-	@staticmethod
-	def backward(ctx, grad_out):
-		grads = ctx.saved_tensors
-		return grads
-
-nllDistributedFull = NLLDistributedFull.apply
-
 class DistributedClassifier(M.Model):
 	def initialize(self, num_classes, gpus):
 		# if self.gpus is None, then this layer runs in cpu mode 
@@ -150,7 +112,8 @@ class DistributedClassifier(M.Model):
 		else:
 			self.weights = []
 			for idx, i in enumerate(self.gpus):
-				weight = Parameter(torch.ones(*self.weight_shape[idx], device=torch.device('cuda:%d'%i)))
+				# weight = Parameter(torch.ones(*self.weight_shape[idx], device=torch.device('cuda:%d'%i)))
+				weight = Parameter(torch.ones(*self.weight_shape[idx]))
 				self.register_parameter('w%d'%idx,weight)
 				init.normal_(weight, std=0.01)
 				self.weights.append(weight)
@@ -167,7 +130,7 @@ class DistributedClassifier(M.Model):
 			loss = -loss.mean()
 			return loss, acc
 		else:
-			weight_scattered = self.weights 
+			weight_scattered = (w.to(i) for w,i in zip(self.weights, self.gpus) )
 			feat_copies = [x.to(i) for i in self.gpus]
 			labels_scattered = []
 			for i in range(len(self.weights)):
@@ -175,11 +138,10 @@ class DistributedClassifier(M.Model):
 				labels_new[(labels_new>=self.weight_idx[i+1]) | (labels_new<self.weight_idx[i])] = -1
 				labels_new = labels_new - self.weight_idx[i]
 				labels_scattered.append(labels_new)
-			# kwargs_scattered = scatter(kwargs, self.gpus)
+			kwargs_scattered = scatter(kwargs, self.gpus)
 			input_scattered = list(zip(feat_copies, weight_scattered, labels_scattered))
-			# modules = [classify] * len(self.weights)
-			# results_scattered = parallel_apply(modules, input_scattered, kwargs_scattered, self.gpus)
-			results_scattered = [classify(*i, **kwargs) for i in input_scattered]
+			modules = [classify] * len(self.weights)
+			results_scattered = parallel_apply(modules, input_scattered, kwargs_scattered, self.gpus)
 
 			logits = [i[0] for i in results_scattered]
 			xexps = [i[1] for i in results_scattered]
@@ -187,40 +149,33 @@ class DistributedClassifier(M.Model):
 			argmaxs = [i[3] for i in results_scattered]
 			maxs = [i[4] for i in results_scattered]
 
-			# sums = gather(sums, 0, dim=1)
-			# print(sums[0].shape)
-			sums = [i.to(0) for i in sums]
-			sums = torch.cat(sums, dim=1)
+			sums = gather(sums, 0, dim=1)
 			sums = sums.sum(dim=1, keepdim=True)
 			sums_scattered = [sums.to(i) for i in self.gpus]
 			loss_input_scattered = list(zip(logits, xexps, labels_scattered, sums_scattered))
-			loss_input_scattered = [list(i) for i in loss_input_scattered]
-			# loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
-			# loss_results_scattered = [i.sum() for i in loss_results_scattered]
+			loss_results_scattered = parallel_apply([nllDistributed] * len(self.gpus), loss_input_scattered, None, self.gpus)
+			loss_results_scattered = [i.sum() for i in loss_results_scattered]
 			
-			# loss_results_scattered = [i.to(0) for i in loss_results_scattered]
-			# loss = sum(loss_results_scattered)
-			# loss = loss / x.shape[0]
-			loss_input = sum(loss_input_scattered, [])
-			loss = nllDistributedFull(*loss_input)
+			loss_results_scattered = [i.to(0) for i in loss_results_scattered]
+			loss = sum(loss_results_scattered)
+			loss = loss / x.shape[0]
 
-			with torch.no_grad():
-				for i in range(len(argmaxs)):
-					argmaxs[i] = argmaxs[i] + self.weight_idx[i]
-				maxs = [i.to(0) for i in maxs]
-				maxs = torch.stack(maxs, dim=1)
-				
-				_, max_split = torch.max(maxs, dim=1)
-				idx = torch.arange(0,maxs.size(0), dtype=torch.long)
-				argmaxs = [i.to(0) for i in argmaxs]
-				argmaxs = torch.stack(argmaxs, dim=1)
-				predicted = argmaxs[idx, max_split]
+			for i in range(len(argmaxs)):
+				argmaxs[i] = argmaxs[i] + self.weight_idx[i]
+			maxs = [i.to(0) for i in maxs]
+			maxs = torch.stack(maxs, dim=1)
+			
+			_, max_split = torch.max(maxs, dim=1)
+			idx = torch.arange(0,maxs.size(0), dtype=torch.long)
+			argmaxs = [i.to(0) for i in argmaxs]
+			argmaxs = torch.stack(argmaxs, dim=1)
+			predicted = argmaxs[idx, max_split]
 
-				total = label.size(0)
-				predicted = predicted.cpu()
-				label = label.cpu()
-				correct = (predicted == label).sum().item()
-				acc = correct / total 
+			total = label.size(0)
+			predicted = predicted.cpu()
+			label = label.cpu()
+			correct = (predicted == label).sum().item()
+			acc = correct / total 
 
 			return loss, acc
 
@@ -244,33 +199,3 @@ class DistributedClassifier(M.Model):
 				buf.append(w.data)
 			buf = torch.cat(buf, dim=0)
 		destination[prefix + 'weight'] = buf 
-
-class MarginalCosineLayer(M.Model):
-	def initialize(self, num_classes):
-		self.classifier = M.Dense(num_classes, usebias=False, norm=True)
-	def forward(self, x, label, m1=1.0, m2=0.0, m3=0.0):
-		x = self.classifier(x)
-		if not (m1==1.0 and m2==0.0 and m3==0.0):
-			# print('MarginalCosineLayer used.')
-			idx = torch.arange(0,label.size(0), dtype=torch.long)
-			t = x[idx, label]
-			t = torch.acos(t)
-			if m1!=1.0:
-				t = t * m1 
-			if m2!=0.0:
-				t = t + m2 
-			t = torch.cos(t)
-			x[idx, label] = t - m3 
-		return x 
-
-class NLLLoss(M.Model):
-	def initialize(self):
-		self.lgsm = nn.LogSoftmax(dim=1)
-		# self.lsfn = nn.NLLLoss()
-	def forward(self, x, label):
-		x = self.lgsm(x)
-		label = label.unsqueeze(-1)
-		loss = torch.gather(x, 1, label)
-		loss = -loss.mean()
-		return loss
-		
