@@ -25,10 +25,11 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 		if idx.shape[0]==0:
 			# print('Not in this patch.')
 			x = x * s
-			xexp = torch.exp(x)
-			xsum = xexp.sum(dim=1, keepdim=True)
-			xmax, xargmax = torch.max(xexp, dim=1)
-			return x, xexp, xsum, xargmax, xmax
+			xmax, xargmax = torch.max(x, dim=1)
+			# xexp = torch.exp(x)
+			# xsum = xexp.sum(dim=1, keepdim=True)
+			# xmax, xargmax = torch.max(xexp, dim=1)
+			return x, xargmax, xmax
 		label = label[(label>=0) & (label<idlen)]
 
 		t = x[idx, label]
@@ -48,10 +49,20 @@ def classify(feat, weight, label, m1=1.0, m2=0.5, m3=0.0, s=64, simple_output=Fa
 	if simple_output:
 		return x 
 	else:
-		xexp = torch.exp(x)
-		xsum = xexp.sum(dim=1, keepdim=True)
-		xmax, xargmax = torch.max(xexp, dim=1)
-		return x, xexp, xsum, xargmax, xmax
+		xmax, xargmax = torch.max(x, dim=1)
+		# xexp = torch.exp(x)
+		# xsum = xexp.sum(dim=1, keepdim=True)
+		# xmax, xargmax = torch.max(xexp, dim=1)
+		return x, xargmax, xmax
+
+def compute_exp_sum(x, xmax):
+	# print(xmax)
+	# print(xmax.shape)
+	x = x - xmax
+	xexp = torch.exp(x)
+	# print(xexp)
+	xsum = xexp.sum(dim=1, keepdim=True)
+	return xexp, xsum
 
 # change backward in autograd
 class NLLDistributed(torch.autograd.Function):
@@ -144,10 +155,25 @@ class DistributedClassifier(M.Model):
 			results_scattered = parallel_apply(modules, input_scattered, kwargs_scattered, self.gpus)
 
 			logits = [i[0] for i in results_scattered]
-			xexps = [i[1] for i in results_scattered]
-			sums = [i[2] for i in results_scattered]
-			argmaxs = [i[3] for i in results_scattered]
-			maxs = [i[4] for i in results_scattered]
+			# xexps = [i[1] for i in results_scattered]
+			# sums = [i[2] for i in results_scattered]
+			argmaxs = [i[1] for i in results_scattered]
+			maxs = [i[2] for i in results_scattered]
+
+			maxs = [i.to(0) for i in maxs]
+			maxs = torch.stack(maxs, dim=1)
+			max_num, max_split = torch.max(maxs, dim=1)
+			# print(max_num.shape)
+			# input('adf')
+			max_num = torch.unsqueeze(max_num, 1)
+			maxs_2 = [max_num.to(i) for i in self.gpus]
+
+			input_scattered = list(zip(logits, maxs_2))
+			results_scattered = parallel_apply([compute_exp_sum] * len(self.gpus), input_scattered, None, self.gpus)
+			xexps = [i[0] for i in results_scattered]
+			sums = [i[1] for i in results_scattered]
+			# print(xexps.shape)
+			# print(sums.shape)
 
 			sums = gather(sums, 0, dim=1)
 			sums = sums.sum(dim=1, keepdim=True)
@@ -157,15 +183,16 @@ class DistributedClassifier(M.Model):
 			loss_results_scattered = [i.sum() for i in loss_results_scattered]
 			
 			loss_results_scattered = [i.to(0) for i in loss_results_scattered]
+			# print(loss_results_scattered)
 			loss = sum(loss_results_scattered)
 			loss = loss / x.shape[0]
 
 			for i in range(len(argmaxs)):
 				argmaxs[i] = argmaxs[i] + self.weight_idx[i]
-			maxs = [i.to(0) for i in maxs]
-			maxs = torch.stack(maxs, dim=1)
+			# maxs = [i.to(0) for i in maxs]
+			# maxs = torch.stack(maxs, dim=1)
 			
-			_, max_split = torch.max(maxs, dim=1)
+			# _, max_split = torch.max(maxs, dim=1)
 			idx = torch.arange(0,maxs.size(0), dtype=torch.long)
 			argmaxs = [i.to(0) for i in argmaxs]
 			argmaxs = torch.stack(argmaxs, dim=1)
