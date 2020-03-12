@@ -1,4 +1,5 @@
-import Model as M 
+import os 
+from TorchSUL import Model as M 
 import network 
 import torch 
 import numpy as np 
@@ -20,7 +21,7 @@ class modelBundle(M.Model):
 
 def generate_mask(x):
 	shape = x.shape
-	choice = random.random() * 3
+	choice = random.random() * 4
 	if choice<1:
 		outshape = [x.shape[0], x.shape[1], 17, 1]
 		mask = np.random.choice(2, size=outshape, p=[0.2, 0.8]) # edit probability here
@@ -33,6 +34,13 @@ def generate_mask(x):
 		# mask = np.concatenate([mask]*2, axis=-1)
 		# mask = mask.reshape([x.shape[0], x.shape[1], 1])
 		return np.float32(mask) 
+	elif choice<3:
+		outshape = [x.shape[0], x.shape[1], 1]
+		mask = np.ones(outshape)
+		length = random.randint(0,20)
+		start_point = random.randint(0, x.shape[1]-length)
+		mask[:,start_point:start_point+length] = 0
+		return np.float32(mask) 
 	else:
 		outshape = [x.shape[0], 1, 17, 1]
 		mask = np.random.choice(2, size=outshape, p=[0.1, 0.9]) # edit probability here
@@ -40,10 +48,18 @@ def generate_mask(x):
 		mask = mask.reshape([x.shape[0], 1, 34])
 		return np.float32(mask) 
 
+def generate_noise(x):
+	noise = np.random.random(x.shape) * 0.15 - 0.075
+	noise = np.float32(noise)
+	noisemask = generate_mask(x)
+	noise = noise * noisemask
+	return noise
+
 def lossfunc(x, model, init=False):
 	data, label = x 
 	mask = generate_mask(data)
-	data = data * mask
+	noise = generate_noise(data)
+	data = (data + noise) * mask
 	data = np.transpose(data, [0,2,1])
 	label = np.transpose(label, [0,2,1])
 
@@ -75,7 +91,7 @@ nets.cuda()
 nets.train()
 
 optim = torch.optim.Adam(nets.parameters(), lr=0.001, betas=(0.5, 0.999))
-MAXITER = 90001
+MAXITER = 45001
 bar = tqdm(range(MAXITER))
 for i in bar:
 	x = reader.get_next()
@@ -91,7 +107,7 @@ for i in bar:
 	if i%3000==0 and i>0:
 		saver.save('./model/%d.ckpt'%i)
 
-	if i%30000==0 and i>0:
+	if i%15000==0 and i>0:
 		newlr = lr * 0.1 
 		for param_group in optim.param_groups:
 			param_group['lr'] = newlr

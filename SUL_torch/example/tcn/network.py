@@ -1,4 +1,4 @@
-import Model as M 
+from TorchSUL import Model as M 
 import random
 import torch 
 import torch.nn as nn
@@ -57,14 +57,4 @@ class Refine2dNet(M.Model):
 		x = self.c4(x)
 		# print(x.shape)
 		return x 
-
-class Discriminator2D(M.Model):
-	def initialize(self):
-		self.c1 = M.ConvLayer1D(1, 1024, activation=M.PARAM_PRELU, batch_norm=True, usebias=False)
-		self.c2 = M.ConvLayer1D(1, 256, activation=M.PARAM_PRELU, batch_norm=True, usebias=False)
-		self.c3 = M.ConvLayer1D(1, 256, activation=M.PARAM_PRELU, batch_norm=True, usebias=False)
-		self.c4 = M.ConvLayer1D(1, 1)
-
-	def forward(self, x):
-		return self.c4(self.c3(self.c2(self.c1(x))))
 
