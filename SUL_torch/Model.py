@@ -25,6 +25,12 @@ PARAM_SWISH = 7
 PARAM_PRELU = 8
 PARAM_PRELU1 = 9
 
+# recorded paramters 
+def get_record():
+	return L.record_params
+def reset_record():
+	L.record_params = []
+
 class Saver():
 	def __init__(self, module):
 		self.model = module
@@ -86,6 +92,12 @@ class ConvLayer(Model):
 		elif self.activation==PARAM_PRELU1:
 			self.act = torch.nn.PReLU(num_parameters=1)
 	def forward(self, x):
+		if self._record:
+			record_flag = True
+			self.un_record()
+		else:
+			record_flag = False
+		# print('Record:',record_flag)
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
@@ -93,16 +105,48 @@ class ConvLayer(Model):
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
-		if hasattr(self, 'record'):
-			if self.record:
-				# do record
+
+		if record_flag:
+			# print(self._merge_bn)
+			# do record
+			if self._merge_bn:
+				miu = self.bn.running_mean
+				var = self.bn.running_var
+				gamma = self.bn.weight
+				beta = self.bn.bias 
+				eps = self.bn.eps 
+				if gamma is None:
+					gamma = 1 
+				if beta is None:
+					beta = 0
+				weight = self.conv.weight
+				bias = self.conv.bias
+
+				if bias is not None:
+					b = gamma * (bias - miu) / torch.sqrt(eps + var) + beta 
+				else:
+					b = beta - (gamma * miu / torch.sqrt(eps + var))
+				bn_w = gamma / torch.sqrt(eps + var)
+				bn_w = bn_w.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+				w = bn_w * weight
+
+				res = {}
+				base_name = list(self.named_parameters())[0][0]
+				base_name = '.'.join(base_name.split('.')[:-1])
+				res[base_name+'.weight'] = w 
+				res[base_name+'.bias'] = b
+
+				if self.activation==PARAM_PRELU or self.activation==PARAM_PRELU1:
+					actw = self.act.weight
+					res['act.weight'] = actw
+				# print(res.keys())
+			else:
 				res = {}
 				for p in self.named_parameters():
 					res[p[0]] = p[1]
 				for p in self.named_buffers():
 					res[p[0]] = p[1]
-				L.record_params.append(res)
-			self.record = False
+			L.record_params.append(res)
 		return x 
 
 class DWConvLayer(Model):
@@ -120,6 +164,9 @@ class DWConvLayer(Model):
 		elif self.activation==PARAM_PRELU1:
 			self.act = torch.nn.PReLU(num_parameters=1)
 	def forward(self, x):
+		if hasattr(self, 'record'):
+			record_flag = self.record
+			self.un_record()
 		x = self.conv(x)
 		if self.batch_norm:
 			x = self.bn(x)
@@ -127,16 +174,15 @@ class DWConvLayer(Model):
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
-		if hasattr(self, 'record'):
-			if self.record:
-				# do record
-				res = {}
-				for p in self.named_parameters():
-					res[p[0]] = p[1]
-				for p in self.named_buffers():
-					res[p[0]] = p[1]
-				L.record_params.append(res)
-			self.record = False
+
+		if record_flag:
+			# do record
+			res = {}
+			for p in self.named_parameters():
+				res[p[0]] = p[1]
+			for p in self.named_buffers():
+				res[p[0]] = p[1]
+			L.record_params.append(res)
 		return x 
 
 class ConvLayer1D(Model):
@@ -193,6 +239,11 @@ class Dense(Model):
 		if batch_norm:
 			self.bn = L.BatchNorm(affine=affine)
 	def forward(self, x):
+		if self._record:
+			record_flag = True
+			self.un_record()
+		else:
+			record_flag = False
 		x = self.fc(x)
 		if self.batch_norm:
 			x = self.bn(x)
@@ -200,6 +251,46 @@ class Dense(Model):
 			x = self.act(x)
 		else:
 			x = L.activation(x, self.activation)
+		
+		if record_flag:
+			# print(self._merge_bn)
+			# do record
+			if self._merge_bn:
+				miu = self.bn.running_mean
+				var = self.bn.running_var
+				gamma = self.bn.weight
+				beta = self.bn.bias 
+				eps = self.bn.eps 
+				if gamma is None:
+					gamma = 1 
+				if beta is None:
+					beta = 0
+				weight = self.fc.weight
+				bias = self.fc.bias
+
+				if bias is not None:
+					b = gamma * (bias - miu) / torch.sqrt(eps + var) + beta 
+				else:
+					b = beta - (gamma * miu / torch.sqrt(eps + var))
+				bn_w = gamma / torch.sqrt(eps + var)
+				bn_w = bn_w.unsqueeze(-1)
+				w = bn_w * weight
+
+				res = {}
+				base_name = list(self.named_parameters())[0][0]
+				base_name = '.'.join(base_name.split('.')[:-1])
+				res[base_name+'.weight'] = w 
+				res[base_name+'.bias'] = b
+				# print(res.keys())
+
+			else:
+				res = {}
+				for p in self.named_parameters():
+					res[p[0]] = p[1]
+				for p in self.named_buffers():
+					res[p[0]] = p[1]
+			L.record_params.append(res)
+
 		return x 
 
 class LSTMCell(Model):

@@ -16,6 +16,8 @@ class Model(nn.Module):
 	def __init__(self, *args, **kwargs):
 		super(Model, self).__init__()
 		self.is_built = False
+		self._record = False
+		self._merge_bn = False
 		self.initialize(*args, **kwargs)
 
 	def initialize(self, *args, **kwargs):
@@ -59,8 +61,23 @@ class Model(nn.Module):
 
 	def record(self):
 		def set_record_flag(obj):
-			obj.record = True
+			obj._record = True
 		self.apply(set_record_flag)
+
+	def un_record(self):
+		def unset_record_flag(obj):
+			obj._record = False
+		self.apply(unset_record_flag)
+
+	def merge_bn(self):
+		def set_merge_bn(obj):
+			obj._merge_bn = True 
+		self.apply(set_merge_bn)
+
+	def bn_eps(self, value):
+		def set_eps(obj):
+			obj.eps = value
+		self.apply(set_eps)
 
 class conv2D(Model):
 	def initialize(self, size, outchn, stride=1, pad='SAME_LEFT', dilation_rate=1, usebias=True, gropus=1):
@@ -396,6 +413,7 @@ class BatchNorm(Model):
 			init.zeros_(self.bias)
 
 	def forward(self, input):
+		global record_params
 		if self.momentum is None:
 			exponential_average_factor = 0.0
 		else:
@@ -414,6 +432,15 @@ class BatchNorm(Model):
 			input, self.running_mean, self.running_var, self.weight, self.bias,
 			self.training or not self.track_running_stats,
 			exponential_average_factor, self.eps)
+		if hasattr(self, 'record'):
+			if self._record:
+				res = {}
+				for p in self.named_parameters():
+					res[p[0]] = p[1]
+				for p in self.named_buffers():
+					res[p[0]] = p[1]
+				record_params.append(res)
+			self.un_record()
 		return result
 
 	# def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
