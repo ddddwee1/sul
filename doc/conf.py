@@ -14,6 +14,7 @@
 #
 import os
 import sys
+from shutil import copyfile
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -90,6 +91,9 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+# Keep the full jQuery 3.7.1 build in _static/jquery.js: the archived search
+# needs Ajax and $.trim. This overrides Sphinx's vulnerable bundled jQuery.
+# Upstream: https://code.jquery.com/jquery-3.7.1.min.js (MIT license).
 html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
@@ -176,3 +180,20 @@ epub_title = project
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
+
+
+def _keep_safe_jquery(app, exception):
+    # Sphinx 1.8 also copies this unused, unminified 3.2.1 distribution.
+    # HTML pages load jquery.js, which html_static_path overrides above.
+    if exception is None and app.builder.format == 'html':
+        # Also replace it on no-op incremental builds, which can skip copying
+        # html_static_path and leave a pre-existing vulnerable jquery.js behind.
+        copyfile(os.path.join(app.confdir, '_static', 'jquery.js'),
+                 os.path.join(app.outdir, '_static', 'jquery.js'))
+        legacy = os.path.join(app.outdir, '_static', 'jquery-3.2.1.js')
+        if os.path.isfile(legacy):
+            os.remove(legacy)
+
+
+def setup(app):
+    app.connect('build-finished', _keep_safe_jquery)
